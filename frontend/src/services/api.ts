@@ -1,10 +1,12 @@
 // services/api.ts — All API calls to the FastAPI backend
 
-const BASE = '/api';
+const BASE = 'https://biogas-digital-twin-1.onrender.com/api';
 
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE}${path}`);
-  if (!res.ok) throw new Error(`API error ${res.status}: ${path}`);
+  if (!res.ok) {
+    throw new Error(`API error ${res.status}: ${path}`);
+  }
   return res.json();
 }
 
@@ -14,13 +16,18 @@ async function post<T>(path: string, body: unknown): Promise<T> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`API error ${res.status}: ${path}`);
+
+  if (!res.ok) {
+    throw new Error(`API error ${res.status}: ${path}`);
+  }
+
   return res.json();
 }
 
 // ── Sensors ──────────────────────────────────────────────────
 export const sensorsApi = {
   getLatest: () => get('/sensors/latest'),
+
   getHistory: (hours = 24, limit = 200) =>
     get(`/sensors/history?hours=${hours}&limit=${limit}`),
 };
