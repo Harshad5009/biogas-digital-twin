@@ -8,11 +8,11 @@ var vite_config_default = defineConfig({
     port: 5173,
     proxy: {
       "/api": {
-        target: "http://localhost:8001",
+        target: "https://biogas-digital-twin-1.onrender.com",
         changeOrigin: true
       },
       "/ws": {
-        target: "ws://localhost:8001",
+        target: "wss://biogas-digital-twin-1.onrender.com",
         ws: true
       }
     }
