@@ -1,7 +1,7 @@
 # REST API & WebSocket Documentation
 
-Base URL: `http://localhost:8001`
-Interactive Swagger UI: `http://localhost:8001/docs`
+Base URL: `https://biogas-digital-twin-1.onrender.com`
+Interactive Swagger UI: `https://biogas-digital-twin-1.onrender.com/docs`
 
 ---
 

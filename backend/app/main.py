@@ -473,7 +473,7 @@ async def lifespan(app: FastAPI):
         )
 
     logger.info(
-        "Backend ready. API docs: http://localhost:8001/docs"
+        "Backend ready. API docs: https://biogas-digital-twin-1.onrender.com/docs"
     )
 
     logger.info("=" * 60)

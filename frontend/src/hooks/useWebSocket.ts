@@ -1,64 +1,114 @@
 // hooks/useWebSocket.ts — WebSocket hook for real-time updates
+
 import { useEffect, useRef, useState, useCallback } from 'react';
 import type { TwinState, WebSocketMessage } from '../types';
 
-const WS_URL = `ws://${window.location.hostname}:8000/ws`;
+// Render backend WebSocket URL
+const WS_URL = 'wss://biogas-digital-twin-1.onrender.com/ws';
 
 export function useWebSocket() {
   const [twinState, setTwinState] = useState<TwinState | null>(null);
   const [connected, setConnected] = useState(false);
-  const [lastRaw, setLastRaw] = useState<Record<string, unknown> | null>(null);
+  const [lastRaw, setLastRaw] = useState<Record<string, unknown> | null>(
+    null
+  );
+
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const shouldReconnect = useRef(true);
 
   const connect = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) return;
+    // Avoid opening multiple connections
+    if (
+      wsRef.current &&
+      (wsRef.current.readyState === WebSocket.OPEN ||
+        wsRef.current.readyState === WebSocket.CONNECTING)
+    ) {
+      return;
+    }
 
-    const ws = new WebSocket(WS_URL);
-    wsRef.current = ws;
+    try {
+      const socket = new WebSocket(WS_URL);
+      wsRef.current = socket;
 
-    ws.onopen = () => {
-      setConnected(true);
-      // Start ping interval
-      const ping = setInterval(() => {
-        if (ws.readyState === WebSocket.OPEN) ws.send('ping');
-      }, 30000);
-      ws.addEventListener('close', () => clearInterval(ping));
-    };
+      socket.onopen = () => {
+        console.log('WebSocket connected');
+        setConnected(true);
 
-    ws.onmessage = (evt) => {
-      try {
-        const msg: WebSocketMessage = JSON.parse(evt.data);
-        if (msg.type === 'update' && msg.twin_state) {
-          setTwinState(msg.twin_state);
-          if (msg.raw) setLastRaw(msg.raw as Record<string, unknown>);
-        } else if (msg.type === 'connected' && msg.twin_state) {
-          setTwinState(msg.twin_state);
+        // Keep the connection alive
+        const pingInterval = setInterval(() => {
+          if (socket.readyState === WebSocket.OPEN) {
+            socket.send('ping');
+          }
+        }, 30000);
+
+        socket.addEventListener('close', () => {
+          clearInterval(pingInterval);
+        });
+      };
+
+      socket.onmessage = (event) => {
+        try {
+          const message: WebSocketMessage = JSON.parse(event.data);
+
+          if (message.type === 'update' && message.twin_state) {
+            setTwinState(message.twin_state);
+
+            if (message.raw) {
+              setLastRaw(message.raw as Record<string, unknown>);
+            }
+          } else if (
+            message.type === 'connected' &&
+            message.twin_state
+          ) {
+            setTwinState(message.twin_state);
+          }
+        } catch (error) {
+          console.warn('WebSocket message parsing error:', error);
         }
-      } catch (e) {
-        console.warn('WS parse error:', e);
-      }
-    };
+      };
 
-    ws.onclose = () => {
+      socket.onclose = () => {
+        console.log('WebSocket disconnected');
+        setConnected(false);
+        wsRef.current = null;
+
+        if (shouldReconnect.current) {
+          reconnectTimer.current = setTimeout(() => {
+            connect();
+          }, 3000);
+        }
+      };
+
+      socket.onerror = (error) => {
+        console.warn('WebSocket error:', error);
+        setConnected(false);
+      };
+    } catch (error) {
+      console.warn('Unable to create WebSocket connection:', error);
       setConnected(false);
-      wsRef.current = null;
-      // Auto-reconnect after 3 seconds
-      reconnectTimer.current = setTimeout(connect, 3000);
-    };
-
-    ws.onerror = () => {
-      ws.close();
-    };
+    }
   }, []);
 
   useEffect(() => {
+    shouldReconnect.current = true;
     connect();
+
     return () => {
-      if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
+      shouldReconnect.current = false;
+
+      if (reconnectTimer.current) {
+        clearTimeout(reconnectTimer.current);
+      }
+
       wsRef.current?.close();
+      wsRef.current = null;
     };
   }, [connect]);
 
-  return { twinState, connected, lastRaw };
+  return {
+    twinState,
+    connected,
+    lastRaw,
+  };
 }

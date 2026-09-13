@@ -12,7 +12,7 @@ export default defineConfig({
         changeOrigin: true,
       },
       '/ws': {
-        target: 'https://biogas-digital-twin-1.onrender.com',
+        target: 'wss://biogas-digital-twin-1.onrender.com',
         ws: true,
       },
     },
