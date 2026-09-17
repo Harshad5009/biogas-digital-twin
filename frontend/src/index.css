@@ -928,3 +928,84 @@ body,
     width: 280px;
   }
 }
+
+/* ─────────────────────────────────────────────────── */
+/* STATUS BADGES                                        */
+/* ─────────────────────────────────────────────────── */
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* LIVE / ESP8266 */
+.badge-healthy {
+  background: rgba(0, 229, 153, 0.1);
+  border: 1px solid rgba(0, 229, 153, 0.35);
+  color: #00e599;
+}
+
+/* SIMULATION */
+.badge-sim {
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: #38bdf8;
+}
+
+/* STALE */
+.badge-warn {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #f59e0b;
+}
+
+/* WAITING / unknown */
+.badge-wait {
+  background: rgba(148, 163, 184, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  color: #94a3b8;
+}
+
+/* ─────────────────────────────────────────────────── */
+/* SIMULATION BANNER                                   */
+/* ─────────────────────────────────────────────────── */
+
+.sim-banner {
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  color: #38bdf8;
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+/* ─────────────────────────────────────────────────── */
+/* GENERIC CARD                                        */
+/* ─────────────────────────────────────────────────── */
+
+.card {
+  background: #0c1524;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+/* ─────────────────────────────────────────────────── */
+/* GRADIENT TEXT                                       */
+/* ─────────────────────────────────────────────────── */
+
+.gradient-text {
+  background: linear-gradient(135deg, #00e599, #38bdf8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}

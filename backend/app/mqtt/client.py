@@ -217,37 +217,22 @@ class MQTTClient:
             logger.info("MQTT connected successfully.")
 
             # ------------------------------------------------
-            # Subscribe to ESP8266 sensor data
+            # Subscribe ONLY to ESP8266 sensor topic
+            # (Do NOT subscribe to wildcard biogas/# to avoid echo loops)
             # ------------------------------------------------
             result_sensor, _ = client.subscribe(
-                "biogas/#"
+                settings.MQTT_TOPIC_SENSORS
             )
 
             if result_sensor == mqtt.MQTT_ERR_SUCCESS:
                 logger.info(
-                    "Subscribed to wildcard topic: biogas/#"
+                    "Subscribed to sensor topic: %s",
+                    settings.MQTT_TOPIC_SENSORS,
                 )
             else:
                 logger.error(
-                    "Failed to subscribe to wildcard topic: biogas/#"
-                )
-
-            # ------------------------------------------------
-            # Subscribe to simulation data
-            # ------------------------------------------------
-            result_simulation, _ = client.subscribe(
-                TOPIC_SIMULATION
-            )
-
-            if result_simulation == mqtt.MQTT_ERR_SUCCESS:
-                logger.info(
-                    "Subscribed to simulation topic: %s",
-                    TOPIC_SIMULATION,
-                )
-            else:
-                logger.error(
-                    "Failed to subscribe to simulation topic: %s",
-                    TOPIC_SIMULATION,
+                    "Failed to subscribe to sensor topic: %s",
+                    settings.MQTT_TOPIC_SENSORS,
                 )
 
         else:
@@ -319,14 +304,28 @@ class MQTTClient:
             )
 
             # ------------------------------------------------
-            # Validate that the payload is a dictionary
+            # Topic & Payload Validation
             # ------------------------------------------------
-            if not isinstance(payload, dict):
-                logger.warning(
-                    "MQTT payload is not a JSON object: %s",
-                    payload,
+            if msg.topic != settings.MQTT_TOPIC_SENSORS:
+                logger.debug(
+                    "Ignoring non-sensor MQTT message from topic %s",
+                    msg.topic,
                 )
                 return
+
+            # Ignore alert/command payloads that might have arrived
+            if "command" in payload and not ("temperature" in payload or "mq5_analog" in payload or "mq5" in payload):
+                logger.info(
+                    "Ignoring non-sensor command/alert message on topic %s",
+                    msg.topic,
+                )
+                return
+
+            # Explicitly mark incoming hardware data source as LIVE
+            if "source" not in payload or payload["source"] not in ["LIVE", "ESP8266"]:
+                payload["source"] = "LIVE"
+
+            logger.info("Received LIVE MQTT reading from %s", payload.get("device_id", settings.DIGESTER_ID))
 
             # ------------------------------------------------
             # Call the backend data-processing callback

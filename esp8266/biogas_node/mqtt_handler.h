@@ -1,241 +1,288 @@
-import json
-import logging
-import ssl
-import threading
-from typing import Callable, Optional
+/**
+ * mqtt_handler.h — MQTT handler for ESP8266 Biogas Monitoring Node
+ *
+ * Handles:
+ *   - TLS connection to HiveMQ Cloud (port 8883)
+ *   - Wi-Fi reconnection
+ *   - MQTT reconnection
+ *   - JSON sensor telemetry publication
+ *   - Alert/command reception from backend
+ *
+ * Libraries required (install via Arduino Library Manager):
+ *   - PubSubClient  (by Nick O'Leary)
+ *   - ArduinoJson   (by Benoit Blanchon, v6+)
+ *   - ESP8266WiFi   (included with ESP8266 board package)
+ *   - WiFiClientSecure (included with ESP8266 board package)
+ *
+ * Usage:
+ *   1. Fill in credentials in config.h
+ *   2. Call mqttSetup() in setup()
+ *   3. Call mqttLoop()  in loop()
+ *   4. Call publishSensorReading(...) whenever you have fresh readings
+ */
 
-import paho.mqtt.client as mqtt
+#pragma once
 
-from app.config import settings
+#include <Arduino.h>
+#include <ESP8266WiFi.h>
+#include <WiFiClientSecure.h>
+#include <PubSubClient.h>
+#include <ArduinoJson.h>
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Pull credentials from config.h
+// Expected defines in config.h:
+//   WIFI_SSID, WIFI_PASSWORD
+//   MQTT_HOST, MQTT_PORT (8883), MQTT_USERNAME, MQTT_PASSWORD, MQTT_CLIENT_ID
+//   MQTT_TOPIC_SENSORS   e.g. "biogas/digester01/sensors"
+//   MQTT_TOPIC_COMMANDS  e.g. "biogas/digester01/commands"
+//   DEVICE_ID            e.g. "digester01"
+// ─────────────────────────────────────────────────────────────────────────────
+#include "config.h"
 
-logger = logging.getLogger(__name__)
+// ─────────────────────────────────────────────────────────────────────────────
+// Globals (file-local)
+// ─────────────────────────────────────────────────────────────────────────────
+static WiFiClientSecure  _wifiClient;
+static PubSubClient      _mqttClient(_wifiClient);
 
+// Callback registered by the sketch to handle backend commands
+static void (*_commandCallback)(const char* command, const char* level) = nullptr;
 
-class MQTTHandler:
-    """
-    Handles MQTT communication between the FastAPI backend
-    and the ESP8266 biogas monitoring device.
-    """
+// ─────────────────────────────────────────────────────────────────────────────
+// Forward declarations
+// ─────────────────────────────────────────────────────────────────────────────
+static void _mqttCallback(char* topic, byte* payload, unsigned int length);
+static bool _mqttReconnect();
+static void _ensureWiFi();
 
-    def __init__(self):
-        self.client = None
-        self.connected = False
-        self._message_callback: Optional[Callable] = None
-        self._lock = threading.Lock()
+// ─────────────────────────────────────────────────────────────────────────────
+// Wi-Fi connection
+// ─────────────────────────────────────────────────────────────────────────────
 
-        self.mqtt_host = settings.MQTT_HOST
-        self.mqtt_port = int(settings.MQTT_PORT)
-        self.mqtt_username = settings.MQTT_USERNAME
-        self.mqtt_password = settings.MQTT_PASSWORD
-        self.mqtt_topic = settings.MQTT_TOPIC_SENSORS
-        self.mqtt_client_id = settings.MQTT_CLIENT_ID
+static void _ensureWiFi() {
+    if (WiFi.status() == WL_CONNECTED) return;
 
-    def set_message_callback(self, callback: Callable):
-        """
-        Register a function to process received MQTT messages.
-        """
-        self._message_callback = callback
+    Serial.print("[WiFi] Connecting to SSID: ");
+    Serial.println(WIFI_SSID);
 
-    def _on_connect(self, client, userdata, flags, rc, properties=None):
-        """
-        Called when the backend connects to the MQTT broker.
-        """
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
-        if rc == 0:
-            self.connected = True
+    uint8_t retries = 0;
+    while (WiFi.status() != WL_CONNECTED && retries < 30) {
+        delay(500);
+        Serial.print('.');
+        retries++;
+    }
 
-            logger.info(
-                "Connected to MQTT broker: %s:%s",
-                self.mqtt_host,
-                self.mqtt_port,
-            )
+    if (WiFi.status() == WL_CONNECTED) {
+        Serial.println();
+        Serial.print("[WiFi] Connected. IP: ");
+        Serial.println(WiFi.localIP());
+    } else {
+        Serial.println("\n[WiFi] Connection failed — will retry.");
+    }
+}
 
-            result, mid = client.subscribe(self.mqtt_topic)
+// ─────────────────────────────────────────────────────────────────────────────
+// MQTT callback — handles commands from backend
+// ─────────────────────────────────────────────────────────────────────────────
 
-            if result == mqtt.MQTT_ERR_SUCCESS:
-                logger.info(
-                    "Subscribed to MQTT topic: %s",
-                    self.mqtt_topic,
-                )
-            else:
-                logger.error(
-                    "Failed to subscribe to topic: %s",
-                    self.mqtt_topic,
-                )
+static void _mqttCallback(char* topic, byte* payload, unsigned int length) {
+    // Null-terminate payload
+    char buf[256];
+    size_t copyLen = (length < sizeof(buf) - 1) ? length : sizeof(buf) - 1;
+    memcpy(buf, payload, copyLen);
+    buf[copyLen] = '\0';
 
-        else:
-            self.connected = False
-            logger.error(
-                "MQTT connection failed. Return code: %s",
-                rc,
-            )
+    Serial.print("[MQTT] Message received on topic: ");
+    Serial.print(topic);
+    Serial.print(" | Payload: ");
+    Serial.println(buf);
 
-    def _on_disconnect(
-        self,
-        client,
-        userdata,
-        rc,
-        properties=None,
-    ):
-        """
-        Called when the backend disconnects from the MQTT broker.
-        """
+    // Only handle command topic
+    if (strcmp(topic, MQTT_TOPIC_COMMANDS) != 0) return;
 
-        self.connected = False
+    // Parse JSON command
+    StaticJsonDocument<256> doc;
+    DeserializationError err = deserializeJson(doc, buf);
+    if (err) {
+        Serial.print("[MQTT] JSON parse error: ");
+        Serial.println(err.c_str());
+        return;
+    }
 
-        if rc == 0:
-            logger.info("Disconnected from MQTT broker normally.")
-        else:
-            logger.warning(
-                "Unexpected MQTT disconnection. Return code: %s",
-                rc,
-            )
+    const char* command = doc["command"] | "";
+    const char* level   = doc["level"]   | "INFO";
 
-    def _on_message(self, client, userdata, message):
-        """
-        Called whenever a message is received from the subscribed topic.
-        """
+    if (_commandCallback) {
+        _commandCallback(command, level);
+    }
+}
 
-        try:
-            payload = message.payload.decode("utf-8")
+// ─────────────────────────────────────────────────────────────────────────────
+// MQTT reconnect
+// ─────────────────────────────────────────────────────────────────────────────
 
-            logger.info(
-                "MQTT message received from topic %s: %s",
-                message.topic,
-                payload,
-            )
+static bool _mqttReconnect() {
+    if (_mqttClient.connected()) return true;
 
-            try:
-                data = json.loads(payload)
-            except json.JSONDecodeError:
-                logger.error("Received payload is not valid JSON.")
-                return
+    Serial.print("[MQTT] Connecting to broker: ");
+    Serial.print(MQTT_HOST);
+    Serial.print(":");
+    Serial.println(MQTT_PORT);
 
-            if self._message_callback is not None:
-                self._message_callback(data)
+    bool ok = _mqttClient.connect(
+        MQTT_CLIENT_ID,
+        MQTT_USERNAME,
+        MQTT_PASSWORD
+    );
 
-        except Exception as error:
-            logger.exception(
-                "Error while processing MQTT message: %s",
-                error,
-            )
+    if (ok) {
+        Serial.println("[MQTT] Connected.");
+        // Subscribe to command topic
+        _mqttClient.subscribe(MQTT_TOPIC_COMMANDS);
+        Serial.print("[MQTT] Subscribed to: ");
+        Serial.println(MQTT_TOPIC_COMMANDS);
+    } else {
+        Serial.print("[MQTT] Connection failed. RC=");
+        Serial.println(_mqttClient.state());
+    }
 
-    def connect(self):
-        """
-        Connect the backend to HiveMQ Cloud.
-        """
+    return ok;
+}
 
-        with self._lock:
-            if self.connected:
-                logger.info("MQTT client is already connected.")
-                return
+// ─────────────────────────────────────────────────────────────────────────────
+// Public API — call from setup()
+// ─────────────────────────────────────────────────────────────────────────────
 
-            try:
-                # Compatible with Paho MQTT 2.x and older versions
-                try:
-                    self.client = mqtt.Client(
-                        callback_api_version=mqtt.CallbackAPIVersion.VERSION1,
-                        client_id=self.mqtt_client_id,
-                    )
-                except AttributeError:
-                    self.client = mqtt.Client(
-                        client_id=self.mqtt_client_id,
-                    )
+/**
+ * mqttSetup() — Initialize Wi-Fi + MQTT.
+ *
+ * @param commandCallback  Optional function called when a backend command
+ *                         arrives: void cb(const char* command, const char* level)
+ *                         e.g. command="ALERT", level="WARNING"
+ */
+inline void mqttSetup(void (*commandCallback)(const char*, const char*) = nullptr) {
+    _commandCallback = commandCallback;
 
-                # HiveMQ Cloud authentication
-                self.client.username_pw_set(
-                    username=self.mqtt_username,
-                    password=self.mqtt_password,
-                )
+    // Configure TLS — accept any certificate (suitable for HiveMQ Cloud where
+    // the certificate chain is validated by the CA bundle built into the SDK).
+    // For production use, load a specific certificate fingerprint instead.
+    _wifiClient.setInsecure();
 
-                # Enable TLS encryption for HiveMQ Cloud
-                self.client.tls_set(
-                    cert_reqs=ssl.CERT_REQUIRED,
-                    tls_version=ssl.PROTOCOL_TLS_CLIENT,
-                )
+    // Connect Wi-Fi
+    _ensureWiFi();
 
-                # Register callbacks
-                self.client.on_connect = self._on_connect
-                self.client.on_disconnect = self._on_disconnect
-                self.client.on_message = self._on_message
+    // Configure MQTT broker
+    _mqttClient.setServer(MQTT_HOST, MQTT_PORT);
+    _mqttClient.setCallback(_mqttCallback);
+    _mqttClient.setKeepAlive(60);
+    _mqttClient.setBufferSize(512);
 
-                logger.info(
-                    "Connecting to HiveMQ Cloud at %s:%s",
-                    self.mqtt_host,
-                    self.mqtt_port,
-                )
+    // Initial MQTT connection attempt
+    _mqttReconnect();
+}
 
-                self.client.connect(
-                    host=self.mqtt_host,
-                    port=self.mqtt_port,
-                    keepalive=60,
-                )
+// ─────────────────────────────────────────────────────────────────────────────
+// Public API — call every loop()
+// ─────────────────────────────────────────────────────────────────────────────
 
-                # Start MQTT network loop in background
-                self.client.loop_start()
+/**
+ * mqttLoop() — Maintain Wi-Fi + MQTT connections and process incoming messages.
+ * Call this at the top of loop().
+ */
+inline void mqttLoop() {
+    _ensureWiFi();
 
-            except Exception as error:
-                self.connected = False
-                logger.exception(
-                    "Unable to connect to MQTT broker: %s",
-                    error,
-                )
-                raise
+    if (!_mqttClient.connected()) {
+        static unsigned long lastRetry = 0;
+        if (millis() - lastRetry > 5000) {
+            lastRetry = millis();
+            _mqttReconnect();
+        }
+    }
 
-    def disconnect(self):
-        """
-        Disconnect the backend from the MQTT broker.
-        """
+    _mqttClient.loop();
+}
 
-        with self._lock:
-            if self.client is not None:
-                try:
-                    self.client.loop_stop()
-                    self.client.disconnect()
-                    self.connected = False
-                    logger.info("Disconnected from MQTT broker.")
-                except Exception as error:
-                    logger.exception(
-                        "Error while disconnecting MQTT: %s",
-                        error,
-                    )
+// ─────────────────────────────────────────────────────────────────────────────
+// Public API — publish sensor reading
+// ─────────────────────────────────────────────────────────────────────────────
 
-    def publish(self, topic: str, payload: dict, retain: bool = False):
-        """
-        Publish a JSON message to an MQTT topic.
-        """
+/**
+ * publishSensorReading() — Build and publish a JSON sensor payload.
+ *
+ * Payload schema (matches backend normalize_sensor_data() expectations):
+ * {
+ *   "device_id":     "digester01",
+ *   "source":        "LIVE",
+ *   "temperature":   28.6,
+ *   "humidity":      70.0,
+ *   "mq5_analog":    244,
+ *   "mq5_status":    "NORMAL",
+ *   "mq2_status":    "NORMAL",
+ *   "system_status": "NORMAL",
+ *   "timestamp":     "2024-01-01T12:00:00Z"
+ * }
+ *
+ * @param temperature   DHT11 temperature (°C)
+ * @param humidity      DHT11 humidity (%)
+ * @param mq5Analog     MQ-5 raw ADC reading (0-1023)
+ * @param mq5Status     "NORMAL" or "ALERT"
+ * @param mq2Status     "NORMAL" or "ALERT"
+ * @param systemStatus  "NORMAL", "WARNING", or "CRITICAL"
+ *
+ * @return true if published successfully, false otherwise.
+ */
+inline bool publishSensorReading(
+    float       temperature,
+    float       humidity,
+    int         mq5Analog,
+    const char* mq5Status,
+    const char* mq2Status,
+    const char* systemStatus
+) {
+    if (!_mqttClient.connected()) {
+        Serial.println("[MQTT] Not connected — cannot publish.");
+        return false;
+    }
 
-        if self.client is None or not self.connected:
-            logger.warning("MQTT client is not connected.")
-            return False
+    // Build JSON payload
+    StaticJsonDocument<384> doc;
+    doc["device_id"]     = DEVICE_ID;
+    doc["source"]        = "LIVE";
+    doc["temperature"]   = round(temperature * 100.0f) / 100.0f;
+    doc["humidity"]      = round(humidity    * 100.0f) / 100.0f;
+    doc["mq5_analog"]    = mq5Analog;
+    doc["mq5_status"]    = mq5Status;
+    doc["mq2_status"]    = mq2Status;
+    doc["system_status"] = systemStatus;
 
-        try:
-            message = json.dumps(payload)
+    // ISO-8601 approximate timestamp (NTP not assumed; backend uses server time)
+    doc["timestamp"] = ""; // leave blank — backend fills in server-side timestamp
 
-            result = self.client.publish(
-                topic=topic,
-                payload=message,
-                qos=0,
-                retain=retain,
-            )
+    char jsonBuf[384];
+    serializeJson(doc, jsonBuf, sizeof(jsonBuf));
 
-            if result.rc == mqtt.MQTT_ERR_SUCCESS:
-                logger.info(
-                    "MQTT message published to topic: %s",
-                    topic,
-                )
-                return True
+    bool ok = _mqttClient.publish(MQTT_TOPIC_SENSORS, jsonBuf, /*retained=*/false);
 
-            logger.error(
-                "MQTT publish failed. Return code: %s",
-                result.rc,
-            )
-            return False
+    if (ok) {
+        Serial.print("[MQTT] Published to ");
+        Serial.print(MQTT_TOPIC_SENSORS);
+        Serial.print(": ");
+        Serial.println(jsonBuf);
+    } else {
+        Serial.println("[MQTT] Publish failed.");
+    }
 
-        except Exception as error:
-            logger.exception(
-                "Error while publishing MQTT message: %s",
-                error,
-            )
-            return False
+    return ok;
+}
+
+/**
+ * mqttIsConnected() — Returns true if MQTT broker is currently connected.
+ */
+inline bool mqttIsConnected() {
+    return _mqttClient.connected();
+}

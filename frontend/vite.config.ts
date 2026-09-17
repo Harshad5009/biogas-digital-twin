@@ -8,12 +8,14 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'https://biogas-digital-twin-1.onrender.com',
+        // Local FastAPI backend — use VITE_API_TARGET env var to override for production
+        target: process.env.VITE_API_TARGET || 'http://localhost:8001',
         changeOrigin: true,
       },
       '/ws': {
-        target: 'wss://biogas-digital-twin-1.onrender.com',
+        target: process.env.VITE_WS_TARGET || 'ws://localhost:8001',
         ws: true,
+        changeOrigin: true,
       },
     },
   },

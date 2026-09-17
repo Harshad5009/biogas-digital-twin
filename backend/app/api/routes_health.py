@@ -31,15 +31,25 @@ def get_system_status(db: Session = Depends(get_db)):
         .first()
     )
 
-    source = "SIMULATION" if _simulation_running else "ESP8266" if mqtt_client.is_connected else "NONE"
+    from app.simulation.simulator import is_simulation_running
+    sim_active = is_simulation_running()
+    source = digital_twin.get_effective_data_source()
+
+    last_ts = None
+    if source == "SIMULATION" and digital_twin.last_sim_timestamp:
+        last_ts = digital_twin.last_sim_timestamp
+    elif digital_twin.last_live_timestamp:
+        last_ts = digital_twin.last_live_timestamp
+    elif last:
+        last_ts = last[0]
 
     return schemas.SystemStatusOut(
         backend="ONLINE",
         mqtt_connected=mqtt_client.is_connected,
-        simulation_active=_simulation_running,
+        simulation_active=sim_active,
         database_ok=db_ok,
         digester_id=settings.DIGESTER_ID,
-        last_data_received=last[0] if last else None,
+        last_data_received=last_ts,
         data_source=source,
     )
 

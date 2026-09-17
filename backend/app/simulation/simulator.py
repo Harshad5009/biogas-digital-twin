@@ -213,17 +213,30 @@ async def run_simulation_loop(interval_sec: int, data_callback):
     logger.info("Simulation loop stopped.")
 
 
+def is_simulation_running() -> bool:
+    global _simulation_running, _simulation_task
+    return _simulation_running and _simulation_task is not None and not _simulation_task.done()
+
+
 def stop_simulation():
     global _simulation_running, _simulation_task
     _simulation_running = False
     if _simulation_task and not _simulation_task.done():
         _simulation_task.cancel()
+    _simulation_task = None
+    logger.info("Simulation stopped.")
 
 
 def start_simulation(interval_sec: int, data_callback, loop=None):
-    """Start the simulation as an asyncio background task."""
-    global _simulation_task
+    """Start the simulation as an asyncio background task if not already running."""
+    global _simulation_task, _simulation_running
+    if is_simulation_running():
+        logger.info("Simulation is already running.")
+        return _simulation_task
+
     if loop is None:
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
+
+    _simulation_running = True
     _simulation_task = loop.create_task(run_simulation_loop(interval_sec, data_callback))
     return _simulation_task

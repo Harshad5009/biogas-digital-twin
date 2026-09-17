@@ -36,6 +36,7 @@ from app.analytics.prediction import (
     predict_gas_production,
     predict_temperature,
 )
+from app.config import settings
 
 logger = logging.getLogger("digital_twin")
 
@@ -109,12 +110,19 @@ class DigitalTwin:
         self.anomaly_reason: Optional[str] = None
 
         # ─────────────────────────────────────────────────────────────────────
-        # Metadata
+        # Metadata & Mode Control
         # ─────────────────────────────────────────────────────────────────────
 
+        self.mode: str = "LIVE"  # Explicit mode: "LIVE" or "SIMULATION"
         self.last_update: Optional[datetime] = None
-        self.data_source: str = "SIMULATION"
+        self.data_source: str = "WAITING"
         self.update_count: int = 0
+
+        # Separate buffers for hardware vs simulation
+        self.last_live_reading: Optional[Dict[str, Any]] = None
+        self.last_live_timestamp: Optional[datetime] = None
+        self.last_sim_reading: Optional[Dict[str, Any]] = None
+        self.last_sim_timestamp: Optional[datetime] = None
 
         # ─────────────────────────────────────────────────────────────────────
         # Previous values for spike detection
@@ -141,41 +149,108 @@ class DigitalTwin:
         self.temp_prediction: Optional[Dict[str, Any]] = None
 
     # ─────────────────────────────────────────────────────────────────────────
+    # Mode & Source Selection
+    # ─────────────────────────────────────────────────────────────────────────
+
+    def set_mode(self, mode: str):
+        """
+        Switch mode between 'LIVE' and 'SIMULATION'.
+        When switching back to LIVE, re-applies the last valid hardware reading if present.
+        """
+        mode_upper = mode.upper()
+        if mode_upper not in ["LIVE", "SIMULATION"]:
+            raise ValueError(f"Unknown mode: {mode}. Expected 'LIVE' or 'SIMULATION'")
+
+        self.mode = mode_upper
+        logger.info(f"Digital Twin active mode set to: {self.mode}")
+
+        if self.mode == "LIVE":
+            if self.last_live_reading is not None:
+                self._apply_data(self.last_live_reading)
+            else:
+                self.data_source = "WAITING"
+        elif self.mode == "SIMULATION":
+            if self.last_sim_reading is not None:
+                self._apply_data(self.last_sim_reading)
+            else:
+                self.data_source = "SIMULATION"
+
+    def get_effective_data_source(self) -> str:
+        """
+        Calculates whether current state is LIVE, SIMULATION, WAITING, or STALE.
+        Uses STALE_TIMEOUT_SECONDS (15-20s) to tolerate periodic MQTT delays.
+        """
+        if self.mode == "SIMULATION":
+            return "SIMULATION"
+
+        if self.last_live_timestamp is None:
+            return "WAITING"
+
+        stale_threshold = getattr(settings, "STALE_TIMEOUT_SECONDS", 15)
+        now = datetime.now(timezone.utc)
+        elapsed = (now - self.last_live_timestamp).total_seconds()
+
+        if elapsed <= stale_threshold:
+            return "LIVE"
+        return "STALE"
+
+    def get_connection_status(self) -> str:
+        source = self.get_effective_data_source()
+        if source == "LIVE":
+            return "CONNECTED"
+        elif source == "SIMULATION":
+            return "SIMULATION"
+        elif source == "WAITING":
+            return "WAITING FOR ESP8266 DATA"
+        elif source == "STALE":
+            return "ESP8266 CONNECTION STALE"
+        return "DISCONNECTED"
+
+    # ─────────────────────────────────────────────────────────────────────────
     # Main update method
     # ─────────────────────────────────────────────────────────────────────────
 
     def update(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Update the Digital Twin with new sensor data.
-
-        Expected normalized data format:
-
-        {
-            "temperature": 28.7,
-            "humidity": 70.0,
-            "mq5": 262,
-            "mq2": 0,
-            "methane": None,
-            "gas_production": None,
-            "source": "ESP8266"
-        }
-
-        Returns:
-            Updated Digital Twin state as a dictionary.
+        Update the Digital Twin with new sensor data while strictly preserving
+        source separation between LIVE hardware and SIMULATION data.
         """
+        source = str(data.get("source", "")).upper()
 
-        # ─────────────────────────────────────────────────────────────────────
+        if source in ["LIVE", "ESP8266"]:
+            self.last_live_reading = data
+            self.last_live_timestamp = datetime.now(timezone.utc)
+            # Only update live display state if we are currently in LIVE mode
+            if self.mode == "LIVE":
+                return self._apply_data(data)
+            return self.to_dict()
+
+        elif source == "SIMULATION":
+            self.last_sim_reading = data
+            self.last_sim_timestamp = datetime.now(timezone.utc)
+            # Only update simulation display state if we are currently in SIMULATION mode
+            if self.mode == "SIMULATION":
+                return self._apply_data(data)
+            return self.to_dict()
+
+        else:
+            # Fallback for untagged / test data
+            if self.mode == "SIMULATION":
+                self.last_sim_reading = data
+                self.last_sim_timestamp = datetime.now(timezone.utc)
+            else:
+                self.last_live_reading = data
+                self.last_live_timestamp = datetime.now(timezone.utc)
+            return self._apply_data(data)
+
+    def _apply_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Apply sensor data to the virtual twin calculations."""
         # 1. Store previous values
-        # ─────────────────────────────────────────────────────────────────────
-
         self._prev_temperature = self.temperature
         self._prev_mq5 = self.mq5
         self._prev_mq2 = self.mq2
 
-        # ─────────────────────────────────────────────────────────────────────
         # 2. Update current values
-        # ─────────────────────────────────────────────────────────────────────
-
         self.temperature = self._safe_float(
             data.get("temperature")
         )
@@ -198,25 +273,20 @@ class DigitalTwin:
             data.get("gas_production")
         )
 
-        # Preserve the actual source
-        self.data_source = data.get(
-            "source",
-            "SIMULATION"
-        )
+        # Normalize source tag
+        raw_source = str(data.get("source", "LIVE")).upper()
+        if raw_source in ["LIVE", "ESP8266"]:
+            self.data_source = "LIVE"
+        else:
+            self.data_source = "SIMULATION"
 
         self.last_update = datetime.now(timezone.utc)
         self.update_count += 1
 
-        # ─────────────────────────────────────────────────────────────────────
         # 3. Calculate relative gas indicator
-        # ─────────────────────────────────────────────────────────────────────
-
         self.gas_indicator = self._calculate_gas_indicator()
 
-        # ─────────────────────────────────────────────────────────────────────
         # 4. Append values to rolling histories
-        # ─────────────────────────────────────────────────────────────────────
-
         if self.temperature is not None:
             self._temp_history.append(self.temperature)
 
@@ -226,10 +296,7 @@ class DigitalTwin:
         if self.mq5 is not None:
             self._mq5_history.append(self.mq5)
 
-        # ─────────────────────────────────────────────────────────────────────
         # 5. Run anomaly detection
-        # ─────────────────────────────────────────────────────────────────────
-
         try:
             anomaly_result = detect_anomaly(
                 temperature=self.temperature,
@@ -262,10 +329,7 @@ class DigitalTwin:
             self.anomaly_detected = False
             self.anomaly_reason = None
 
-        # ─────────────────────────────────────────────────────────────────────
         # 6. Calculate health score
-        # ─────────────────────────────────────────────────────────────────────
-
         try:
             health_result = calculate_health_score(
                 temperature=self.temperature,
@@ -291,24 +355,16 @@ class DigitalTwin:
                 f"Health score calculation unavailable: {health_error}"
             )
 
-            # Fallback health calculation based only on available
-            # real sensors.
             self.health_score, self.status = (
                 self._calculate_available_sensor_health()
             )
 
-        # ─────────────────────────────────────────────────────────────────────
         # 7. Correct status when optional sensors are unavailable
-        # ─────────────────────────────────────────────────────────────────────
-
         self._apply_available_sensor_status()
 
         self._health_history.append(self.health_score)
 
-        # ─────────────────────────────────────────────────────────────────────
         # 8. Refresh predictions every 5 readings
-        # ─────────────────────────────────────────────────────────────────────
-
         if self.update_count % 5 == 0:
             self._refresh_predictions()
 
@@ -584,7 +640,14 @@ class DigitalTwin:
                 if self.last_update
                 else None
             ),
-            "data_source": self.data_source,
+            "last_live_timestamp": (
+                self.last_live_timestamp.isoformat()
+                if self.last_live_timestamp
+                else None
+            ),
+            "mode": self.mode,
+            "data_source": self.get_effective_data_source(),
+            "connection_status": self.get_connection_status(),
             "update_count": self.update_count,
 
             # Predictions

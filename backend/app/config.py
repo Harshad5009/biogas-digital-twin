@@ -37,8 +37,9 @@ class Settings:
     MQTT_TOPIC_ALERTS: str = os.getenv("MQTT_TOPIC_ALERTS", "biogas/digester01/alerts")
 
     # Simulation
-    SIMULATION_ENABLED: bool = os.getenv("SIMULATION_ENABLED", "true").lower() == "true"
+    SIMULATION_ENABLED: bool = os.getenv("SIMULATION_ENABLED", "false").lower() == "true"
     SIMULATION_INTERVAL_SECONDS: int = int(os.getenv("SIMULATION_INTERVAL_SECONDS", "5"))
+    STALE_TIMEOUT_SECONDS: int = int(os.getenv("STALE_TIMEOUT_SECONDS", "15"))
 
     # Digester ID
     DIGESTER_ID: str = os.getenv("DIGESTER_ID", "digester01")

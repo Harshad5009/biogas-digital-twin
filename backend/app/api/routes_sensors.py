@@ -12,13 +12,48 @@ router = APIRouter(prefix="/api/sensors", tags=["Sensors"])
 
 
 @router.get("/latest", response_model=schemas.SensorReadingOut, summary="Get latest sensor reading")
-def get_latest(db: Session = Depends(get_db)):
-    """Returns the most recent sensor reading from any source."""
-    reading = (
-        db.query(models.SensorReading)
-        .order_by(models.SensorReading.timestamp.desc())
-        .first()
+def get_latest(
+    source: Optional[str] = Query(None, description="Optional source filter: LIVE, ESP8266, or SIMULATION"),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns the most recent valid sensor reading.
+    In LIVE mode (default), returns the latest physical hardware reading.
+    In SIMULATION mode, returns the latest simulated reading.
+    """
+    query = db.query(models.SensorReading).filter(
+        (models.SensorReading.temperature.isnot(None)) |
+        (models.SensorReading.mq5_value.isnot(None))
     )
+
+    if source:
+        src_upper = source.upper()
+        if src_upper in ["LIVE", "ESP8266"]:
+            query = query.filter(models.SensorReading.source.in_(["LIVE", "ESP8266"]))
+        else:
+            query = query.filter(models.SensorReading.source == src_upper)
+    else:
+        # Check active twin mode: if LIVE, prefer LIVE readings
+        from app.digital_twin.twin import digital_twin
+        if digital_twin.mode == "LIVE":
+            live_reading = (
+                query.filter(models.SensorReading.source.in_(["LIVE", "ESP8266"]))
+                .order_by(models.SensorReading.timestamp.desc())
+                .first()
+            )
+            if live_reading:
+                return live_reading
+        elif digital_twin.mode == "SIMULATION":
+            sim_reading = (
+                query.filter(models.SensorReading.source == "SIMULATION")
+                .order_by(models.SensorReading.timestamp.desc())
+                .first()
+            )
+            if sim_reading:
+                return sim_reading
+
+    reading = query.order_by(models.SensorReading.timestamp.desc()).first()
+
     if not reading:
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="No sensor readings found yet.")

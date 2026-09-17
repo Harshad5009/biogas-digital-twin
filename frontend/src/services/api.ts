@@ -1,6 +1,7 @@
 // services/api.ts — All API calls to the FastAPI backend
 
-const BASE = 'https://biogas-digital-twin-1.onrender.com/api';
+// Use env var if set (Render deployment), otherwise fall back to local dev proxy
+const BASE = import.meta.env.VITE_API_URL || '/api';
 
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE}${path}`);
@@ -26,7 +27,8 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 
 // ── Sensors ──────────────────────────────────────────────────
 export const sensorsApi = {
-  getLatest: () => get('/sensors/latest'),
+  getLatest: (source?: string) =>
+    get(`/sensors/latest${source ? `?source=${source}` : ''}`),
 
   getHistory: (hours = 24, limit = 200) =>
     get(`/sensors/history?hours=${hours}&limit=${limit}`),
@@ -48,6 +50,7 @@ export const predictionsApi = {
 // ── Simulation ────────────────────────────────────────────────
 export const simulationApi = {
   start: (scenario: string) => post('/simulation/start', { scenario }),
+  stop: () => post('/simulation/stop', {}),
   getStatus: () => get('/simulation/status'),
   whatIf: (params: object) => post('/simulation/what-if', params),
 };

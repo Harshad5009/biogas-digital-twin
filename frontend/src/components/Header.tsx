@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Leaf, Cloud, Radio, Menu } from 'lucide-react';
+import { Leaf, Cloud, Radio, Menu, Square, Play } from 'lucide-react';
 import type { TwinState } from '../types';
 import { simulationApi } from '../services/api';
 
@@ -11,6 +11,7 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ twinState, connected }) => {
   const [timeStr, setTimeStr] = useState<string>('');
   const [activeScenario, setActiveScenario] = useState('normal');
+  const [simBusy, setSimBusy] = useState(false);
 
   useEffect(() => {
     const update = () => {
@@ -22,12 +23,57 @@ export const Header: React.FC<HeaderProps> = ({ twinState, connected }) => {
     return () => clearInterval(timer);
   }, []);
 
+  const isSimulation = twinState?.data_source === 'SIMULATION';
+  const dataSource = twinState?.data_source;
+
+  // ── Dynamic status badge ──────────────────────────────────
+  const statusBadge = (() => {
+    if (!connected) return { label: 'OFFLINE', color: '#ef4444', bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.3)' };
+    switch (dataSource) {
+      case 'LIVE':
+      case 'ESP8266': return { label: 'LIVE', color: '#00e599', bg: 'rgba(0,229,153,0.1)', border: 'rgba(0,229,153,0.3)' };
+      case 'SIMULATION': return { label: 'SIM', color: '#38bdf8', bg: 'rgba(56,189,248,0.12)', border: 'rgba(56,189,248,0.3)' };
+      case 'STALE': return { label: 'STALE', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)', border: 'rgba(245,158,11,0.3)' };
+      case 'WAITING':
+      default: return { label: 'WAITING', color: '#94a3b8', bg: 'rgba(148,163,184,0.08)', border: 'rgba(148,163,184,0.2)' };
+    }
+  })();
+
+  // ── Simulation controls ───────────────────────────────────
+  const handleStartSimulation = async () => {
+    setSimBusy(true);
+    try {
+      await simulationApi.start(activeScenario);
+    } catch (e) {
+      console.error('Failed to start simulation:', e);
+    } finally {
+      setSimBusy(false);
+    }
+  };
+
+  const handleStopSimulation = async () => {
+    setSimBusy(true);
+    try {
+      await simulationApi.stop();
+    } catch (e) {
+      console.error('Failed to stop simulation:', e);
+    } finally {
+      setSimBusy(false);
+    }
+  };
+
   const handleScenarioChange = async (sc: string) => {
     setActiveScenario(sc);
-    try {
-      await simulationApi.start(sc);
-    } catch (e) {
-      console.error(e);
+    if (isSimulation) {
+      // Immediately switch scenario if simulation is already running
+      setSimBusy(true);
+      try {
+        await simulationApi.start(sc);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setSimBusy(false);
+      }
     }
   };
 
@@ -35,7 +81,7 @@ export const Header: React.FC<HeaderProps> = ({ twinState, connected }) => {
     <header style={{
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       padding: '0.65rem 1.25rem', background: '#080f1c', borderBottom: '1px solid rgba(255,255,255,0.06)',
-      position: 'sticky', top: 0, zIndex: 30
+      position: 'sticky', top: 0, zIndex: 30, flexWrap: 'wrap', gap: '0.5rem'
     }}>
       {/* Brand Title */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -57,13 +103,13 @@ export const Header: React.FC<HeaderProps> = ({ twinState, connected }) => {
             </span>
           </div>
           <div style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 500 }}>
-            Real-time Monitoring & Intelligent Analytics
+            Real-time Monitoring &amp; Intelligent Analytics
           </div>
         </div>
       </div>
 
-      {/* Center Plant Status Badge */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+      {/* Center: Plant Status + Simulation Controls */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: '#94a3b8' }}>
           <span>Plant ID: <strong style={{ color: '#f8fafc' }}>BG-001</strong></span>
           <span className="online-pill">
@@ -72,14 +118,20 @@ export const Header: React.FC<HeaderProps> = ({ twinState, connected }) => {
           </span>
         </div>
 
-        {/* Live Scenario Switcher for Academic Demo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 6, padding: '2px 6px' }}>
-          <span style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>Demo Mode:</span>
+        {/* Scenario selector */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '0.4rem',
+          background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: 6, padding: '2px 6px'
+        }}>
+          <span style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>
+            Scenario:
+          </span>
           <select
             value={activeScenario}
             onChange={(e) => handleScenarioChange(e.target.value)}
             style={{
-              background: 'transparent', border: 'none', color: '#00e599',
+              background: 'transparent', border: 'none', color: '#94a3b8',
               fontSize: '0.72rem', fontWeight: 700, outline: 'none', cursor: 'pointer'
             }}
           >
@@ -90,9 +142,47 @@ export const Header: React.FC<HeaderProps> = ({ twinState, connected }) => {
             <option value="recovery" style={{ background: '#0c1524', color: '#fff' }}>5. Recovery Mode</option>
           </select>
         </div>
+
+        {/* Start Simulation Button (shown when NOT in simulation) */}
+        {!isSimulation && (
+          <button
+            onClick={handleStartSimulation}
+            disabled={simBusy}
+            title="Start simulation with selected scenario"
+            style={{
+              display: 'flex', alignItems: 'center', gap: '0.3rem',
+              background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.3)',
+              color: '#38bdf8', padding: '0.3rem 0.65rem', borderRadius: 6,
+              fontSize: '0.72rem', fontWeight: 700, cursor: simBusy ? 'not-allowed' : 'pointer',
+              opacity: simBusy ? 0.6 : 1
+            }}
+          >
+            <Play size={12} />
+            Start Simulation
+          </button>
+        )}
+
+        {/* Stop Simulation Button (shown when IN simulation) */}
+        {isSimulation && (
+          <button
+            onClick={handleStopSimulation}
+            disabled={simBusy}
+            title="Stop simulation and return to live hardware mode"
+            style={{
+              display: 'flex', alignItems: 'center', gap: '0.3rem',
+              background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+              color: '#ef4444', padding: '0.3rem 0.65rem', borderRadius: 6,
+              fontSize: '0.72rem', fontWeight: 700, cursor: simBusy ? 'not-allowed' : 'pointer',
+              opacity: simBusy ? 0.6 : 1
+            }}
+          >
+            <Square size={12} />
+            Stop Simulation
+          </button>
+        )}
       </div>
 
-      {/* Right Actions & Live Status */}
+      {/* Right: Clock + dynamic status badge */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
         <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
           Last Updated: <strong style={{ color: '#94a3b8', fontFamily: 'JetBrains Mono, monospace' }}>{timeStr}</strong>
@@ -105,13 +195,14 @@ export const Header: React.FC<HeaderProps> = ({ twinState, connected }) => {
           <Cloud size={15} />
         </button>
 
+        {/* Dynamic data-source status badge */}
         <div style={{
-          display: 'flex', alignItems: 'center', gap: '5px',
-          background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)',
-          color: '#10b981', padding: '0.3rem 0.65rem', borderRadius: 8, fontSize: '0.72rem', fontWeight: 700
+          display: 'flex', alignItems: 'center', gap: 5,
+          background: statusBadge.bg, border: `1px solid ${statusBadge.border}`,
+          color: statusBadge.color, padding: '0.3rem 0.65rem', borderRadius: 8, fontSize: '0.72rem', fontWeight: 700
         }}>
           <Radio size={13} />
-          <span>Live</span>
+          <span>{statusBadge.label}</span>
         </div>
 
         <button style={{

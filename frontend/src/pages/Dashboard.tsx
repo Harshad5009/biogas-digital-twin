@@ -1,70 +1,83 @@
-import { useEffect, useState } from "react";
-import { sensorsApi } from "../services/api";
+/**
+ * Dashboard.tsx — Main dashboard page.
+ *
+ * Uses WebSocket for real-time twin state updates.
+ * Caches last valid values to prevent N/A flicker during connection
+ * transitions (e.g., when ESP8266 sends a reading every 5s).
+ */
 
-interface SensorData {
-  id?: number;
-  timestamp?: string;
-  device_id?: string;
-  temperature?: number | null;
-  humidity?: number | null;
-  mq5_value?: number | null;
-  mq2_value?: number | null;
-  methane_simulated?: number | null;
-  gas_production_simulated?: number | null;
-  source?: string;
+import { useEffect, useRef, useState } from 'react';
+import { useWebSocket } from '../hooks/useWebSocket';
+import type { TwinState } from '../types';
+
+// ─────────────────────────────────────────────────────────────
+// Data source badge helper
+// ─────────────────────────────────────────────────────────────
+
+function getSourceBadge(ds: string | undefined, connected: boolean) {
+  if (!connected) {
+    return { label: '⚠ BACKEND OFFLINE', color: '#ef4444', bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.3)' };
+  }
+  switch (ds) {
+    case 'LIVE':
+    case 'ESP8266':
+      return { label: '⚡ LIVE — ESP8266 HARDWARE', color: '#00e599', bg: 'rgba(0,229,153,0.1)', border: 'rgba(0,229,153,0.35)' };
+    case 'SIMULATION':
+      return { label: '🔷 SIMULATION MODE', color: '#38bdf8', bg: 'rgba(56,189,248,0.1)', border: 'rgba(56,189,248,0.3)' };
+    case 'STALE':
+      return { label: '⏳ ESP8266 STALE — Signal lost', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)', border: 'rgba(245,158,11,0.3)' };
+    case 'WAITING':
+    default:
+      return { label: '⏳ WAITING FOR ESP8266 DATA', color: '#94a3b8', bg: 'rgba(148,163,184,0.08)', border: 'rgba(148,163,184,0.2)' };
+  }
 }
 
-export function Dashboard() {
-  const [sensor, setSensor] = useState<SensorData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+// ─────────────────────────────────────────────────────────────
+// Helper: safe format
+// ─────────────────────────────────────────────────────────────
 
-  const loadSensorData = async () => {
-    try {
-      const data = await sensorsApi.getLatest();
-      setSensor(data as SensorData);
-      setError("");
-    } catch (err) {
-      console.error("Unable to load sensor data:", err);
-      setError("Unable to connect to backend");
-    } finally {
-      setLoading(false);
-    }
-  };
+const fmt = (v: number | null | undefined, suffix = '') =>
+  v !== null && v !== undefined ? `${v}${suffix}` : 'N/A';
+
+// ─────────────────────────────────────────────────────────────
+// Dashboard Component
+// ─────────────────────────────────────────────────────────────
+
+export function Dashboard() {
+  // WebSocket provides real-time twin state
+  const { twinState: wsTwin, connected } = useWebSocket();
+
+  // Cached twin — preserves last known good values so the display
+  // doesn't blank out between readings (prevents N/A flicker)
+  const cachedTwin = useRef<TwinState | null>(null);
+  const [displayTwin, setDisplayTwin] = useState<TwinState | null>(null);
 
   useEffect(() => {
-    loadSensorData();
-
-    // Refresh ESP8266 data every 5 seconds
-    const interval = setInterval(loadSensorData, 5000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  const temperature = sensor?.temperature;
-  const humidity = sensor?.humidity;
-  const mq5 = sensor?.mq5_value;
-  const mq2 = sensor?.mq2_value;
-
-  const mq2Status =
-    mq2 === 1
-      ? "ALERT"
-      : "NORMAL";
-
-  const formatValue = (
-    value: number | null | undefined,
-    suffix = ""
-  ) => {
-    if (value === null || value === undefined) {
-      return "N/A";
+    if (wsTwin) {
+      cachedTwin.current = wsTwin;
+      setDisplayTwin(wsTwin);
     }
+  }, [wsTwin]);
 
-    return `${value}${suffix}`;
-  };
+  const ts = displayTwin;
 
-  const lastUpdated = sensor?.timestamp
-    ? new Date(sensor.timestamp).toLocaleTimeString()
-    : "Waiting...";
+  const temperature = ts?.temperature;
+  const humidity = ts?.humidity;
+  const mq5 = ts?.mq5;
+  const mq2 = ts?.mq2;
+  const healthScore = ts?.health_score ?? 100;
+  const status = ts?.status ?? 'HEALTHY';
+  const dataSource = ts?.data_source;
+
+  const mq2Status = mq2 === 1 ? 'ALERT' : 'NORMAL';
+
+  const lastUpdated = ts?.last_update
+    ? new Date(ts.last_update).toLocaleTimeString()
+    : 'Waiting...';
+
+  const badge = getSourceBadge(dataSource, connected);
+
+  const isSimulation = dataSource === 'SIMULATION';
 
   return (
     <div className="dashboard-page">
@@ -76,15 +89,26 @@ export function Dashboard() {
           <p>Real-time monitoring and digital twin visualization</p>
         </div>
 
-        <div className="dashboard-status">
-          <span className="status-dot"></span>
-          {error ? "OFFLINE" : "ONLINE"}
+        <div className="dashboard-status" style={{
+          display: 'flex', alignItems: 'center', gap: '0.5rem',
+          background: badge.bg, border: `1px solid ${badge.border}`,
+          color: badge.color, borderRadius: 8, padding: '0.3rem 0.8rem',
+          fontSize: '0.75rem', fontWeight: 700
+        }}>
+          {badge.label}
         </div>
       </div>
 
-      {error && (
-        <div className="dashboard-error">
-          {error}. Make sure the FastAPI backend is running on port 8001.
+      {/* Simulation warning banner */}
+      {isSimulation && (
+        <div style={{
+          background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.25)',
+          color: '#38bdf8', borderRadius: 8, padding: '0.6rem 1rem',
+          fontSize: '0.8rem', fontWeight: 600, margin: '0 0 1rem 0'
+        }}>
+          🔷 SIMULATION MODE ACTIVE — All readings are generated by the simulation engine.
+          These are <strong>not</strong> real sensor measurements.
+          Click &quot;Stop Simulation&quot; in the header to return to live hardware mode.
         </div>
       )}
 
@@ -99,9 +123,15 @@ export function Dashboard() {
           <div className="digital-twin-title">
             <h2>DIGITAL TWIN - VIRTUAL PLANT</h2>
             <p>
-              {error
-                ? "Waiting for physical plant connection"
-                : "Synchronized with physical plant"}
+              {!connected
+                ? 'Backend offline — reconnecting...'
+                : dataSource === 'LIVE' || dataSource === 'ESP8266'
+                ? 'Synchronized with physical plant (ESP8266)'
+                : dataSource === 'SIMULATION'
+                ? 'Running on simulation data'
+                : dataSource === 'STALE'
+                ? 'ESP8266 signal lost — displaying last known values'
+                : 'Waiting for ESP8266 connection...'}
             </p>
           </div>
 
@@ -164,9 +194,11 @@ export function Dashboard() {
             <div className="plant-info digester-info">
               <span>DIGESTER</span>
               <strong>
-                Temperature: {formatValue(temperature, " °C")}
+                Temperature: {fmt(temperature, ' °C')}
               </strong>
-              <small>Live ESP8266 measurement</small>
+              <small>
+                {isSimulation ? 'Simulation estimate' : 'Live ESP8266 measurement'}
+              </small>
             </div>
 
             <div className="plant-info outlet-info">
@@ -196,17 +228,30 @@ export function Dashboard() {
 
         <section className="sensor-card">
           <div className="section-title">
-            <h2>LIVE SENSOR DATA</h2>
-            <span className="live-badge">LIVE</span>
+            <h2>
+              {isSimulation ? 'SIMULATED SENSOR DATA' : 'LIVE SENSOR DATA'}
+            </h2>
+            <span
+              className="live-badge"
+              style={isSimulation ? { background: 'rgba(56,189,248,0.15)', color: '#38bdf8', border: '1px solid rgba(56,189,248,0.3)' } : {}}
+            >
+              {dataSource === 'LIVE' || dataSource === 'ESP8266'
+                ? 'LIVE'
+                : dataSource === 'SIMULATION'
+                ? 'SIM'
+                : dataSource === 'STALE'
+                ? 'STALE'
+                : 'WAITING'}
+            </span>
           </div>
 
           <div className="sensor-grid">
 
             <SensorBox
               title="Methane (CH₄)"
-              value="N/A"
-              subtitle="Digital Twin estimate"
-              estimated
+              value={fmt(ts?.methane_estimate, ' %')}
+              subtitle={isSimulation ? 'Simulation estimate' : 'Digital Twin estimate (no CH₄ sensor)'}
+              estimated={!isSimulation}
             />
 
             <SensorBox
@@ -217,9 +262,9 @@ export function Dashboard() {
 
             <SensorBox
               title="Temperature — DHT11"
-              value={formatValue(temperature, " °C")}
-              subtitle="Real ESP8266 measurement"
-              live
+              value={fmt(temperature, ' °C')}
+              subtitle={isSimulation ? 'Simulation estimate' : 'Real ESP8266 measurement'}
+              live={!isSimulation}
             />
 
             <SensorBox
@@ -230,24 +275,24 @@ export function Dashboard() {
 
             <SensorBox
               title="MQ-5 Relative Gas Level"
-              value={formatValue(mq5)}
+              value={fmt(mq5)}
               subtitle="Raw analog value — not calibrated ppm"
-              live
+              live={!isSimulation}
             />
 
             <SensorBox
               title="Humidity — DHT11"
-              value={formatValue(humidity, " %RH")}
-              subtitle="Real ESP8266 measurement"
-              live
+              value={fmt(humidity, ' %RH')}
+              subtitle={isSimulation ? 'Simulation estimate' : 'Real ESP8266 measurement'}
+              live={!isSimulation}
             />
 
             <SensorBox
               title="MQ-2 Gas Detection"
-              value={mq2Status}
+              value={mq2 !== null && mq2 !== undefined ? mq2Status : 'N/A'}
               subtitle="Digital threshold detection"
-              alert={mq2Status === "ALERT"}
-              live
+              alert={mq2Status === 'ALERT'}
+              live={!isSimulation}
             />
 
             <SensorBox
@@ -260,13 +305,13 @@ export function Dashboard() {
 
           <div className="data-source">
             Data source:
-            <strong>
-              {sensor?.source || "ESP8266"}
+            <strong style={{ color: badge.color }}>
+              {' '}{dataSource || 'WAITING'}
             </strong>
           </div>
 
           <div className="last-updated">
-            Last updated: {loading ? "Loading..." : lastUpdated}
+            Last updated: {lastUpdated}
           </div>
         </section>
 
@@ -284,30 +329,60 @@ export function Dashboard() {
 
           <div className="health-content">
             <div className="health-circle">
-              <strong>100</strong>
+              <strong>{Math.round(healthScore)}</strong>
               <span>/100</span>
             </div>
 
             <div className="health-details">
-              <h3>HEALTHY</h3>
+              <h3
+                style={{
+                  color: status === 'HEALTHY'
+                    ? '#00e599'
+                    : status === 'DEGRADING'
+                    ? '#f59e0b'
+                    : '#ef4444'
+                }}
+              >
+                {status}
+              </h3>
               <p>
                 Health status calculated from available monitoring
                 parameters.
+                {isSimulation && ' (Simulation data)'}
               </p>
 
+              {ts?.anomaly_detected && (
+                <div style={{
+                  background: 'rgba(239,68,68,0.1)',
+                  border: '1px solid rgba(239,68,68,0.3)',
+                  color: '#ef4444',
+                  borderRadius: 6,
+                  padding: '0.4rem 0.6rem',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  marginTop: '0.5rem'
+                }}>
+                  ⚠ Anomaly: {ts.anomaly_reason || 'Detected'}
+                </div>
+              )}
+
               <div className="health-row">
-                <span>Performance</span>
-                <strong>92%</strong>
+                <span>Health Score</span>
+                <strong>{Math.round(healthScore)}%</strong>
               </div>
 
               <div className="health-row">
-                <span>Stability</span>
-                <strong>89%</strong>
+                <span>Anomaly</span>
+                <strong style={{ color: ts?.anomaly_detected ? '#ef4444' : '#00e599' }}>
+                  {ts?.anomaly_detected ? 'DETECTED' : 'NONE'}
+                </strong>
               </div>
 
               <div className="health-row">
-                <span>Safety</span>
-                <strong>95%</strong>
+                <span>Connection</span>
+                <strong style={{ color: badge.color }}>
+                  {ts?.connection_status || dataSource || 'WAITING'}
+                </strong>
               </div>
             </div>
           </div>
@@ -358,14 +433,16 @@ export function Dashboard() {
 
             <PredictionBox
               title="Methane Estimate"
-              value="N/A"
-              status="Estimated"
+              value={ts?.temp_prediction?.predicted_value != null
+                ? `${ts.temp_prediction.predicted_value.toFixed(1)} %`
+                : 'N/A'}
+              status={ts?.temp_prediction?.trend || 'Estimated'}
             />
 
             <PredictionBox
               title="Gas Flow Estimate"
               value="N/A"
-              status="Estimated"
+              status="No flow sensor"
             />
 
             <PredictionBox
@@ -376,8 +453,8 @@ export function Dashboard() {
 
             <PredictionBox
               title="Current Temperature"
-              value={formatValue(temperature, " °C")}
-              status="Live"
+              value={fmt(temperature, ' °C')}
+              status={isSimulation ? 'Simulation' : 'Live'}
             />
 
           </div>
@@ -415,14 +492,14 @@ function SensorBox({
       <div className="sensor-title">{title}</div>
 
       <div
-        className={`sensor-value ${alert ? "value-alert" : ""
-          } ${estimated ? "value-estimated" : ""}`}
+        className={`sensor-value ${alert ? 'value-alert' : ''
+          } ${estimated ? 'value-estimated' : ''}`}
       >
         {value}
       </div>
 
       <div
-        className={`sensor-subtitle ${live ? "subtitle-live" : ""
+        className={`sensor-subtitle ${live ? 'subtitle-live' : ''
           }`}
       >
         {subtitle}

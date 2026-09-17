@@ -3,8 +3,10 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import type { TwinState, WebSocketMessage } from '../types';
 
-// Render backend WebSocket URL
-const WS_URL = 'wss://biogas-digital-twin-1.onrender.com/ws';
+// Use env var if set (Render deployment), otherwise fall back to local dev backend
+const WS_URL =
+  import.meta.env.VITE_WS_URL ||
+  `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.hostname}:8001/ws`;
 
 export function useWebSocket() {
   const [twinState, setTwinState] = useState<TwinState | null>(null);
@@ -32,10 +34,10 @@ export function useWebSocket() {
       wsRef.current = socket;
 
       socket.onopen = () => {
-        console.log('WebSocket connected');
+        console.log('WebSocket connected to:', WS_URL);
         setConnected(true);
 
-        // Keep the connection alive
+        // Keep the connection alive with periodic pings
         const pingInterval = setInterval(() => {
           if (socket.readyState === WebSocket.OPEN) {
             socket.send('ping');
@@ -63,6 +65,7 @@ export function useWebSocket() {
           ) {
             setTwinState(message.twin_state);
           }
+          // Ignore 'pong' type messages — they are just keepalive responses
         } catch (error) {
           console.warn('WebSocket message parsing error:', error);
         }

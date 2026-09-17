@@ -10,7 +10,7 @@ export interface SensorReading {
   mq2_value: number | null;
   methane_simulated: number | null;
   gas_production_simulated: number | null;
-  source: 'SIMULATION' | 'ESP8266';
+  source: 'LIVE' | 'SIMULATION' | 'ESP8266';
 }
 
 export interface TwinState {
@@ -26,7 +26,10 @@ export interface TwinState {
   anomaly_detected: boolean;
   anomaly_reason: string | null;
   last_update: string | null;
-  data_source: 'SIMULATION' | 'ESP8266' | 'NONE';
+  data_source: 'LIVE' | 'ESP8266' | 'SIMULATION' | 'WAITING' | 'STALE' | 'DISCONNECTED';
+  mode?: string;
+  connection_status?: string;
+  last_live_timestamp?: string | null;
   update_count: number;
   gas_prediction: PredictionResult | null;
   temp_prediction: PredictionResult | null;
