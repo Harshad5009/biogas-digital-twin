@@ -245,25 +245,35 @@ body,
 
 .digital-twin-title {
   position: absolute;
-  top: 26px;
-  left: 26px;
-  z-index: 10;
-  padding: 17px 20px;
-  border: 1px solid #2d536e;
+  top: 18px;
+  left: 18px;
+  z-index: 15;
+  padding: 10px 14px;
+  border: 1px solid rgba(45, 83, 110, 0.6);
   border-radius: 9px;
-  background: rgba(4, 17, 29, 0.92);
+  background: rgba(4, 17, 29, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  max-width: 260px;
 }
 
 .digital-twin-title h2 {
   margin: 0;
-  font-size: 18px;
-  letter-spacing: 0.3px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #f1f5f9;
 }
 
 .digital-twin-title p {
-  margin: 9px 0 0;
+  margin: 4px 0 0;
   color: #00e7a2;
-  font-size: 13px;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
 }
 
 /* Virtual plant background */
@@ -558,29 +568,29 @@ body,
 }
 
 .gas-holder-info {
-  top: 75px;
-  left: 6%;
+  top: 165px;
+  left: 18px;
 }
 
 .digester-info {
-  top: 80px;
-  left: 45%;
+  top: 18px;
+  left: 50%;
   transform: translateX(-50%);
 }
 
 .outlet-info {
-  top: 130px;
-  right: 6%;
+  top: 90px;
+  right: 18px;
 }
 
 .feed-info {
-  bottom: 40px;
-  left: 5%;
+  bottom: 24px;
+  left: 18px;
 }
 
 .slurry-info {
-  bottom: 40px;
-  right: 5%;
+  bottom: 24px;
+  right: 18px;
 }
 
 /* ========================================================= */
@@ -932,16 +942,53 @@ body,
     grid-template-columns: 1fr;
   }
 
+  .digital-twin-title {
+    top: 10px;
+    left: 10px;
+    max-width: 200px;
+    padding: 7px 10px;
+  }
+
+  .digital-twin-title h2 {
+    font-size: 11px;
+  }
+
+  .digital-twin-title p {
+    font-size: 9.5px;
+  }
+
   .plant-info {
-    transform: scale(0.8);
+    padding: 7px 10px;
+    min-width: 110px;
   }
 
-  .digester-dome {
-    width: 250px;
+  .plant-info strong {
+    font-size: 11px;
   }
 
-  .digester-body {
-    width: 280px;
+  .gas-holder-info {
+    top: 115px;
+    left: 10px;
+  }
+
+  .digester-info {
+    top: 10px;
+    left: 60%;
+  }
+
+  .outlet-info {
+    top: 70px;
+    right: 10px;
+  }
+
+  .feed-info {
+    bottom: 12px;
+    left: 10px;
+  }
+
+  .slurry-info {
+    bottom: 12px;
+    right: 10px;
   }
 }
 

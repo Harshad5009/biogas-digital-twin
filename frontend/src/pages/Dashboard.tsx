@@ -153,12 +153,12 @@ export function Dashboard({ twinState: propTwin, connected: propConnected }: Das
               {!connected
                 ? 'Backend offline — reconnecting...'
                 : dataSource === 'LIVE' || dataSource === 'ESP8266'
-                ? 'Synchronized with physical plant (ESP8266)'
+                ? 'Synchronized with ESP8266'
                 : dataSource === 'SIMULATION'
-                ? 'Running on simulation data'
+                ? 'Running simulation data'
                 : dataSource === 'STALE'
-                ? 'ESP8266 signal lost — displaying last known values'
-                : 'Waiting for ESP8266 connection...'}
+                ? 'ESP8266 signal lost — last known'
+                : 'Waiting for ESP8266...'}
             </p>
           </div>
 
