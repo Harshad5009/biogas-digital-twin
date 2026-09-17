@@ -1,7 +1,6 @@
-// hooks/useWebSocket.ts — WebSocket hook for real-time updates
-
 import { useEffect, useRef, useState, useCallback } from 'react';
 import type { TwinState, WebSocketMessage } from '../types';
+import { twinApi } from '../services/api';
 
 // Use env var if set, otherwise smart fallback: local dev backend on localhost, Render backend in production
 const isLocalhost =
@@ -17,9 +16,7 @@ const WS_URL =
 export function useWebSocket() {
   const [twinState, setTwinState] = useState<TwinState | null>(null);
   const [connected, setConnected] = useState(false);
-  const [lastRaw, setLastRaw] = useState<Record<string, unknown> | null>(
-    null
-  );
+  const [lastRaw, setLastRaw] = useState<Record<string, unknown> | null>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -99,6 +96,45 @@ export function useWebSocket() {
     }
   }, []);
 
+  // 1. Immediately fetch current twin state via HTTP on mount so data displays in < 200ms
+  useEffect(() => {
+    let active = true;
+    twinApi.getState()
+      .then((state) => {
+        if (active && state) {
+          setTwinState((prev) => (prev !== null ? prev : state));
+          setConnected(true);
+        }
+      })
+      .catch((err) => {
+        console.warn('Initial HTTP twin state fetch error:', err);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // 2. If WebSocket is not connected, poll via HTTP every 5s as a fallback
+  useEffect(() => {
+    if (connected) return;
+
+    const pollInterval = setInterval(() => {
+      twinApi.getState()
+        .then((state) => {
+          if (state) {
+            setTwinState(state);
+            setConnected(true);
+          }
+        })
+        .catch(() => {
+          // If both WS and HTTP fail, backend is truly unreachable
+        });
+    }, 5000);
+
+    return () => clearInterval(pollInterval);
+  }, [connected]);
+
+  // 3. Connect WebSocket for live streaming
   useEffect(() => {
     shouldReconnect.current = true;
     connect();

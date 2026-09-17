@@ -1,4 +1,5 @@
 // services/api.ts — All API calls to the FastAPI backend
+import type { TwinState } from '../types';
 
 // Use env var if set, otherwise smart fallback: local dev proxy on localhost, Render backend in production
 const isLocalhost =
@@ -42,7 +43,7 @@ export const sensorsApi = {
 
 // ── Digital Twin ──────────────────────────────────────────────
 export const twinApi = {
-  getState: () => get('/twin/state'),
+  getState: () => get<TwinState>('/twin/state'),
   getHealth: () => get('/twin/health'),
   getHistory: (limit = 100) => get(`/twin/history?limit=${limit}`),
 };

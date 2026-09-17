@@ -49,8 +49,8 @@ export const App: React.FC = () => {
             }}
           >
             <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/twin" element={<Dashboard />} />
+              <Route path="/" element={<Dashboard twinState={twinState} connected={connected} />} />
+              <Route path="/twin" element={<Dashboard twinState={twinState} connected={connected} />} />
 
               <Route
                 path="/sensors"

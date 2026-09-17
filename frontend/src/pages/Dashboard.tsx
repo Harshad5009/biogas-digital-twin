@@ -8,6 +8,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useWebSocket } from '../hooks/useWebSocket';
+import { twinApi } from '../services/api';
 import type { TwinState } from '../types';
 
 // ─────────────────────────────────────────────────────────────
@@ -43,21 +44,45 @@ const fmt = (v: number | null | undefined, suffix = '') =>
 // Dashboard Component
 // ─────────────────────────────────────────────────────────────
 
-export function Dashboard() {
-  // WebSocket provides real-time twin state
-  const { twinState: wsTwin, connected } = useWebSocket();
+interface DashboardProps {
+  twinState?: TwinState | null;
+  connected?: boolean;
+}
+
+export function Dashboard({ twinState: propTwin, connected: propConnected }: DashboardProps = {}) {
+  // If props are passed from App, use them; otherwise hook into WebSocket
+  const ws = useWebSocket();
+  const activeTwin = propTwin !== undefined ? propTwin : ws.twinState;
+  const connected = propConnected !== undefined ? propConnected : ws.connected;
 
   // Cached twin — preserves last known good values so the display
   // doesn't blank out between readings (prevents N/A flicker)
-  const cachedTwin = useRef<TwinState | null>(null);
-  const [displayTwin, setDisplayTwin] = useState<TwinState | null>(null);
+  const cachedTwin = useRef<TwinState | null>(activeTwin || null);
+  const [displayTwin, setDisplayTwin] = useState<TwinState | null>(activeTwin || null);
 
+  // 1. Initial HTTP fetch on mount so data is displayed immediately in < 200ms
   useEffect(() => {
-    if (wsTwin) {
-      cachedTwin.current = wsTwin;
-      setDisplayTwin(wsTwin);
+    let active = true;
+    twinApi.getState()
+      .then((state) => {
+        if (active && state) {
+          cachedTwin.current = state;
+          setDisplayTwin((prev) => (prev !== null ? prev : state));
+        }
+      })
+      .catch((err) => console.warn('Dashboard initial fetch error:', err));
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // 2. Sync whenever WebSocket or parent prop updates
+  useEffect(() => {
+    if (activeTwin) {
+      cachedTwin.current = activeTwin;
+      setDisplayTwin(activeTwin);
     }
-  }, [wsTwin]);
+  }, [activeTwin]);
 
   const ts = displayTwin;
 
