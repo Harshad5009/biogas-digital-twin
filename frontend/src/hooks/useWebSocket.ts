@@ -3,10 +3,16 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import type { TwinState, WebSocketMessage } from '../types';
 
-// Use env var if set (Render deployment), otherwise fall back to local dev backend
+// Use env var if set, otherwise smart fallback: local dev backend on localhost, Render backend in production
+const isLocalhost =
+  typeof window !== 'undefined' &&
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
 const WS_URL =
   import.meta.env.VITE_WS_URL ||
-  `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.hostname}:8001/ws`;
+  (isLocalhost
+    ? `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.hostname}:8001/ws`
+    : 'wss://biogas-digital-twin-1.onrender.com/ws');
 
 export function useWebSocket() {
   const [twinState, setTwinState] = useState<TwinState | null>(null);

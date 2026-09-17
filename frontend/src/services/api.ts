@@ -1,7 +1,13 @@
 // services/api.ts — All API calls to the FastAPI backend
 
-// Use env var if set (Render deployment), otherwise fall back to local dev proxy
-const BASE = import.meta.env.VITE_API_URL || '/api';
+// Use env var if set, otherwise smart fallback: local dev proxy on localhost, Render backend in production
+const isLocalhost =
+  typeof window !== 'undefined' &&
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+const BASE =
+  import.meta.env.VITE_API_URL ||
+  (isLocalhost ? '/api' : 'https://biogas-digital-twin-1.onrender.com/api');
 
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE}${path}`);
