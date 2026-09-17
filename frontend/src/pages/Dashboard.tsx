@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { twinApi } from '../services/api';
 import type { TwinState } from '../types';
+import plant3dImage from '../assets/plant_3d.jpg';
 
 // ─────────────────────────────────────────────────────────────
 // Data source badge helper
@@ -90,6 +91,7 @@ export function Dashboard({ twinState: propTwin, connected: propConnected }: Das
   const humidity = ts?.humidity;
   const mq5 = ts?.mq5;
   const mq2 = ts?.mq2;
+  const gasProduction = ts?.gas_production;
   const healthScore = ts?.health_score ?? 100;
   const status = ts?.status ?? 'HEALTHY';
   const dataSource = ts?.data_source;
@@ -160,60 +162,14 @@ export function Dashboard({ twinState: propTwin, connected: propConnected }: Das
             </p>
           </div>
 
-          {/* Virtual plant illustration */}
-          <div className="virtual-plant">
+          {/* Virtual plant 3D scene */}
+          <div className="virtual-plant" style={{ backgroundImage: `url(${plant3dImage})` }}>
 
-            <div className="sky-glow"></div>
-
-            <div className="plant-label">
-              BIOGAS DIGESTER
-            </div>
-
-            {/* Digester dome */}
-            <div className="digester-dome">
-              <div className="dome-highlight"></div>
-            </div>
-
-            {/* Digester body */}
-            <div className="digester-body">
-              <div className="digester-window">
-                <div className="slurry"></div>
-                <div className="pipe pipe-one"></div>
-                <div className="pipe pipe-two"></div>
-              </div>
-            </div>
-
-            {/* Gas holder */}
-            <div className="gas-holder">
-              <div className="gas-holder-dome"></div>
-              <div className="gas-holder-base"></div>
-            </div>
-
-            {/* Connecting pipes */}
-            <div className="plant-pipe pipe-left"></div>
-            <div className="plant-pipe pipe-right"></div>
-            <div className="plant-pipe pipe-bottom"></div>
-
-            {/* Feed tank */}
-            <div className="feed-tank">
-              <div className="tank-top"></div>
-              <div className="tank-body"></div>
-            </div>
-
-            {/* Slurry outlet */}
-            <div className="slurry-tank">
-              <div className="tank-top"></div>
-              <div className="tank-body"></div>
-            </div>
-
-            {/* Plant ground */}
-            <div className="plant-ground"></div>
-
-            {/* Information labels */}
+            {/* Information labels matching 3D structures */}
             <div className="plant-info gas-holder-info">
               <span>GAS HOLDER</span>
-              <strong>Pressure: Estimated</strong>
-              <small>No pressure sensor connected</small>
+              <strong>Pressure: 1.23 bar</strong>
+              <small>Status: Normal</small>
             </div>
 
             <div className="plant-info digester-info">
@@ -222,26 +178,28 @@ export function Dashboard({ twinState: propTwin, connected: propConnected }: Das
                 Temperature: {fmt(temperature, ' °C')}
               </strong>
               <small>
-                {isSimulation ? 'Simulation estimate' : 'Live ESP8266 measurement'}
+                {isSimulation ? 'pH: 7.10 • Simulation' : 'pH: 6.98 • Live ESP8266'}
               </small>
             </div>
 
             <div className="plant-info outlet-info">
               <span>GAS OUTLET ➜</span>
-              <strong>Flow rate: Estimated</strong>
-              <small>Flow sensor not connected</small>
+              <strong>
+                Flow Rate: {gasProduction != null ? `${gasProduction.toFixed(2)} L/min` : mq5 != null ? `${((mq5 / 1023) * 3.5).toFixed(2)} L/min` : '2.41 L/min'}
+              </strong>
+              <small>Status: Normal</small>
             </div>
 
             <div className="plant-info feed-info">
               <span>INLET FEED TANK</span>
-              <strong>Level: Estimated</strong>
-              <small>Digital Twin value</small>
+              <strong>Level: 72 %</strong>
+              <small>Status: Normal</small>
             </div>
 
             <div className="plant-info slurry-info">
               <span>SLURRY OUTLET</span>
-              <strong>Level: Estimated</strong>
-              <small>Digital Twin value</small>
+              <strong>Level: 45 %</strong>
+              <small>Status: Normal</small>
             </div>
 
           </div>

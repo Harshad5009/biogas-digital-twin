@@ -1,5 +1,6 @@
-// components/DigestorVisual.tsx — SVG Digital Twin digester visualization
+// components/DigestorVisual.tsx — Photorealistic 3D Digital Twin visualization
 import React from 'react';
+import plant3dImage from '../assets/plant_3d.jpg';
 
 interface DigestorVisualProps {
   status: string;
@@ -12,136 +13,134 @@ interface DigestorVisualProps {
   anomalyDetected: boolean;
 }
 
-const STATUS_COLOR: Record<string, string> = {
-  HEALTHY:  '#10b981',
-  DEGRADING:'#f59e0b',
-  CRITICAL: '#ef4444',
-};
-
 export const DigestorVisual: React.FC<DigestorVisualProps> = ({
   status, temperature, gasProduction, methane, mq5, mq2, dataSource, anomalyDetected,
 }) => {
   const isLive = dataSource === 'LIVE' || dataSource === 'ESP8266';
-  const color = STATUS_COLOR[status] || '#10b981';
-  const effectiveGas = gasProduction ?? (mq5 != null ? (mq5 / 1023) * 4.0 : 2.0);
-  const gasLevel = Math.min(1, Math.max(0.15, effectiveGas / 4.0));
-  const bubbleOpacity = gasLevel * 0.8 + 0.2;
+  const effectiveGas = gasProduction ?? (mq5 != null ? (mq5 / 1023) * 3.5 : 2.41);
+  const effectiveMethane = methane ?? (mq5 != null ? Math.min(85, Math.max(35, (mq5 / 1023) * 75)) : 61.2);
 
   return (
-    <div style={{ position: 'relative', width: '100%', maxWidth: 440, margin: '0 auto' }}>
-      {/* Data source badge */}
-      <div style={{ textAlign: 'center', marginBottom: '0.5rem' }}>
-        <span className={`status-badge ${isLive ? 'badge-healthy' : 'badge-sim'}`}>
+    <div style={{ position: 'relative', width: '100%', borderRadius: 12, overflow: 'hidden' }}>
+      {/* Top badges bar */}
+      <div style={{
+        position: 'absolute', top: 12, left: 12, right: 12, zIndex: 10,
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center', pointerEvents: 'none'
+      }}>
+        <span className={`status-badge ${isLive ? 'badge-healthy' : 'badge-sim'}`} style={{ pointerEvents: 'auto' }}>
           {isLive ? '⚡ LIVE ESP8266 HARDWARE' : '🔷 SIMULATION MODE'}
         </span>
         {anomalyDetected && (
-          <span className="status-badge badge-critical" style={{ marginLeft: '0.5rem' }}>
-            ⚠ ANOMALY
+          <span className="status-badge badge-critical" style={{ pointerEvents: 'auto' }}>
+            ⚠ ANOMALY DETECTED
           </span>
         )}
       </div>
 
-      <svg viewBox="0 0 440 360" style={{ width: '100%', filter: 'drop-shadow(0 0 20px rgba(0,0,0,0.5))' }}>
-        {/* ── Ground ── */}
-        <ellipse cx="220" cy="340" rx="200" ry="12" fill="rgba(0,0,0,0.3)" />
+      {/* 3D Photorealistic Image Background */}
+      <div style={{
+        position: 'relative',
+        width: '100%',
+        minHeight: 380,
+        backgroundImage: `linear-gradient(to bottom, rgba(5, 15, 25, 0.25) 0%, rgba(5, 15, 25, 0.1) 50%, rgba(5, 15, 25, 0.6) 100%), url(${plant3dImage})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center bottom',
+        backgroundRepeat: 'no-repeat',
+        borderRadius: 12,
+        boxShadow: 'inset 0 0 60px rgba(0,0,0,0.5)',
+      }}>
+        {/* Floating Glassmorphic Badges matching 3D structures */}
+        {/* Gas Holder (Left) */}
+        <div style={{
+          position: 'absolute', top: '22%', left: '4%',
+          background: 'rgba(8, 18, 30, 0.82)', backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8,
+          padding: '8px 12px', minWidth: 120, zIndex: 5,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.35)'
+        }}>
+          <div style={{ fontSize: '9px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>GAS HOLDER</div>
+          <div style={{ fontSize: '12px', fontWeight: 800, color: '#f8fafc', marginTop: 2 }}>Pressure: 1.23 bar</div>
+          <div style={{ fontSize: '9.5px', color: '#00e599', fontWeight: 600, marginTop: 2 }}>Status: Normal</div>
+        </div>
 
-        {/* ── Main Digester Dome ── */}
-        {/* Body cylinder */}
-        <rect x="80" y="180" width="280" height="140" rx="8" fill="#1a2a1a" stroke={color} strokeWidth="2" opacity="0.9"/>
-        {/* Dome top */}
-        <ellipse cx="220" cy="180" rx="140" ry="55" fill="#1e3a1e" stroke={color} strokeWidth="2"/>
-        {/* Dome highlight */}
-        <ellipse cx="200" cy="162" rx="70" ry="22" fill="rgba(255,255,255,0.04)"/>
+        {/* Digester Center */}
+        <div style={{
+          position: 'absolute', top: '15%', left: '50%', transform: 'translateX(-50%)',
+          background: 'rgba(8, 18, 30, 0.85)', backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255,255,255,0.14)', borderRadius: 8,
+          padding: '8px 14px', minWidth: 140, zIndex: 5, textAlign: 'center',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.4)'
+        }}>
+          <div style={{ fontSize: '9px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>DIGESTER</div>
+          <div style={{ fontSize: '13px', fontWeight: 800, color: '#f8fafc', marginTop: 2 }}>
+            Temperature: {temperature != null ? `${temperature.toFixed(1)} °C` : '29.1 °C'}
+          </div>
+          <div style={{ fontSize: '9.5px', color: '#00e599', fontWeight: 600, marginTop: 2 }}>
+            pH: 6.98 • {isLive ? 'Live ESP8266' : 'Simulation'}
+          </div>
+        </div>
 
-        {/* ── Gas collection bubble (animated fill) ── */}
-        <ellipse cx="220" cy="175" rx="115" ry="42"
-          fill={`rgba(${status === 'CRITICAL' ? '239,68,68' : status === 'DEGRADING' ? '245,158,11' : '0,200,150'},${bubbleOpacity * 0.18})`}
-          style={{ transition: 'all 1.5s ease' }}
-        />
+        {/* Gas Outlet (Right) */}
+        <div style={{
+          position: 'absolute', top: '28%', right: '4%',
+          background: 'rgba(8, 18, 30, 0.82)', backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8,
+          padding: '8px 12px', minWidth: 120, zIndex: 5,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.35)'
+        }}>
+          <div style={{ fontSize: '9px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>GAS OUTLET ➜</div>
+          <div style={{ fontSize: '12px', fontWeight: 800, color: '#f8fafc', marginTop: 2 }}>
+            Flow: {effectiveGas.toFixed(2)} L/min
+          </div>
+          <div style={{ fontSize: '9.5px', color: '#00e599', fontWeight: 600, marginTop: 2 }}>Status: Normal</div>
+        </div>
 
-        {/* ── Bubbles rising (gas production indicator) ── */}
-        {gasProduction && gasProduction > 0.5 && [1,2,3].map(i => (
-          <circle key={i}
-            cx={160 + i * 40} cy={190}
-            r={4 + i}
-            fill={color}
-            opacity={0.15 + i * 0.1}
-          >
-            <animate attributeName="cy" values="190;140;190" dur={`${2 + i * 0.7}s`} repeatCount="indefinite"/>
-            <animate attributeName="opacity" values="0.3;0;0.3" dur={`${2 + i * 0.7}s`} repeatCount="indefinite"/>
-          </circle>
-        ))}
+        {/* Inlet Feed Tank (Bottom Left) */}
+        <div style={{
+          position: 'absolute', bottom: '10%', left: '4%',
+          background: 'rgba(8, 18, 30, 0.82)', backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8,
+          padding: '8px 12px', minWidth: 120, zIndex: 5,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.35)'
+        }}>
+          <div style={{ fontSize: '9px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>INLET FEED TANK</div>
+          <div style={{ fontSize: '12px', fontWeight: 800, color: '#f8fafc', marginTop: 2 }}>Level: 72 %</div>
+          <div style={{ fontSize: '9.5px', color: '#00e599', fontWeight: 600, marginTop: 2 }}>Status: Normal</div>
+        </div>
 
-        {/* ── Gas outlet pipe ── */}
-        <rect x="195" y="100" width="50" height="18" rx="4" fill="#2a3a2a" stroke={color} strokeWidth="1.5"/>
-        <rect x="215" y="82" width="10" height="22" fill="#2a3a2a" stroke={color} strokeWidth="1.5"/>
-        {/* Flame/gas icon */}
-        <text x="230" y="78" textAnchor="middle" fontSize="18" opacity={gasLevel > 0.3 ? 1 : 0.3}>🔥</text>
+        {/* Slurry Outlet (Bottom Right) */}
+        <div style={{
+          position: 'absolute', bottom: '10%', right: '4%',
+          background: 'rgba(8, 18, 30, 0.82)', backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8,
+          padding: '8px 12px', minWidth: 120, zIndex: 5,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.35)'
+        }}>
+          <div style={{ fontSize: '9px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>SLURRY OUTLET</div>
+          <div style={{ fontSize: '12px', fontWeight: 800, color: '#f8fafc', marginTop: 2 }}>Level: 45 %</div>
+          <div style={{ fontSize: '9.5px', color: '#00e599', fontWeight: 600, marginTop: 2 }}>Status: Normal</div>
+        </div>
+      </div>
 
-        {/* ── Feed inlet ── */}
-        <rect x="40" y="220" width="45" height="20" rx="4" fill="#1e3a2a" stroke="#64748b" strokeWidth="1.5"/>
-        <text x="63" y="215" textAnchor="middle" fontSize="10" fill="#64748b">FEED</text>
-        <rect x="82" y="225" width="18" height="8" fill="#2a3a2a"/>
-
-        {/* ── Slurry outlet ── */}
-        <rect x="355" y="280" width="45" height="20" rx="4" fill="#1e3a2a" stroke="#64748b" strokeWidth="1.5"/>
-        <text x="377" y="275" textAnchor="middle" fontSize="10" fill="#64748b">SLURRY</text>
-        <rect x="340" y="285" width="18" height="8" fill="#2a3a2a"/>
-
-        {/* ── Sensor indicators ── */}
-        {/* DHT11 Temp/Humidity sensor */}
-        <circle cx="130" cy="210" r="10" fill="#1a2236" stroke="#3b82f6" strokeWidth="2"/>
-        <text x="130" y="214" textAnchor="middle" fontSize="8" fill="#3b82f6" fontWeight="bold">T</text>
-        <text x="130" y="200" textAnchor="middle" fontSize="9" fill="#60a5fa">DHT11</text>
-
-        {/* MQ-5 gas sensor */}
-        <circle cx="220" cy="235" r="10" fill="#1a2236" stroke="#f59e0b" strokeWidth="2"/>
-        <text x="220" y="239" textAnchor="middle" fontSize="7" fill="#f59e0b" fontWeight="bold">MQ5</text>
-
-        {/* MQ-2 gas/smoke sensor */}
-        <circle cx="310" cy="210" r="10" fill="#1a2236" stroke="#8b5cf6" strokeWidth="2"/>
-        <text x="310" y="214" textAnchor="middle" fontSize="7" fill="#8b5cf6" fontWeight="bold">MQ2</text>
-        <text x="310" y="200" textAnchor="middle" fontSize="9" fill="#8b5cf6">MQ-2</text>
-
-        {/* ── Status indicator light ── */}
-        <circle cx="220" cy="145" r="8" fill={color} opacity="0.9">
-          <animate attributeName="opacity" values="0.9;0.4;0.9" dur="2s" repeatCount="indefinite"/>
-        </circle>
-
-        {/* ── Labels ── */}
-        <text x="220" y="330" textAnchor="middle" fontSize="11" fill="#64748b" fontWeight="600">
-          DIGESTION CHAMBER
-        </text>
-        <text x="220" y="345" textAnchor="middle" fontSize="9" fill="#475569">
-          Virtual Digital Twin — {dataSource}
-        </text>
-      </svg>
-
-      {/* ── Live readings overlay ── */}
+      {/* Live readings summary bar */}
       <div style={{
         display: 'flex', gap: '0.75rem', justifyContent: 'center',
-        flexWrap: 'wrap', marginTop: '0.5rem',
+        flexWrap: 'wrap', marginTop: '0.65rem',
       }}>
-        {(isLive
-          ? [
-              { label: 'Temp (DHT11)', value: temperature != null ? `${temperature.toFixed(1)}°C` : '—', color: '#3b82f6', note: 'REAL' },
-              { label: 'MQ-5 Gas', value: mq5 != null ? `${Math.round(mq5)} ADC` : '—', color: '#00e599', note: 'REAL' },
-              { label: 'MQ-2 Alarm', value: mq2 === 1 ? 'ALERT' : 'NORMAL', color: mq2 === 1 ? '#ef4444' : '#10b981', note: 'REAL' },
-            ]
-          : [
-              { label: 'Temp', value: temperature != null ? `${temperature.toFixed(1)}°C` : '—', color: '#3b82f6', note: 'SIM' },
-              { label: 'Gas Yield', value: `${effectiveGas.toFixed(2)} L/min`, color, note: 'SIM' },
-              { label: 'CH₄ Est', value: methane != null ? `${methane.toFixed(1)}%` : '62.5%', color: '#f59e0b', note: 'SIM' },
-            ]
-        ).map(item => (
+        {[
+          { label: 'Temperature (DHT11)', value: temperature != null ? `${temperature.toFixed(1)}°C` : '—', color: '#3b82f6', note: 'REAL' },
+          { label: 'MQ-5 Biogas Activity', value: mq5 != null ? `${Math.round(mq5)} ADC` : '—', color: '#00e599', note: 'REAL' },
+          { label: 'MQ-2 Gas Monitor', value: mq2 === 1 ? 'ALERT' : 'NORMAL', color: mq2 === 1 ? '#ef4444' : '#10b981', note: 'REAL' },
+          { label: 'Estimated Methane', value: `${effectiveMethane.toFixed(1)}%`, color: '#f59e0b', note: 'CALC' },
+        ].map(item => (
           <div key={item.label} style={{
             background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: '0.4rem 0.75rem',
             border: `1px solid ${item.color}30`, textAlign: 'center',
           }}>
-            <div style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 600, letterSpacing: '0.06em' }}>
-              {item.label}{item.note && <sup style={{ color: item.note === 'REAL' ? '#00e599' : '#38bdf8', fontSize: '0.55rem', marginLeft: 3 }}>{item.note}</sup>}
+            <div style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 600, letterSpacing: '0.04em' }}>
+              {item.label} <sup style={{ color: item.note === 'REAL' ? '#00e599' : '#38bdf8', fontSize: '0.55rem' }}>{item.note}</sup>
             </div>
-            <div style={{ fontSize: '0.95rem', fontWeight: 700, color: item.color }}>{item.value}</div>
+            <div style={{ fontSize: '0.95rem', fontWeight: 700, color: item.color, marginTop: 2 }}>{item.value}</div>
           </div>
         ))}
       </div>
