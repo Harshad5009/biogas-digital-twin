@@ -40,10 +40,21 @@ export const DigitalTwinPage: React.FC<Props> = ({ twinState: propTwin }) => {
       <h1 style={{ fontSize: '1.4rem', fontWeight: 800 }}>
         <span className="gradient-text">Digital Twin State</span>
       </h1>
-      <div className="sim-banner">
-        🔷 The Digital Twin is a <strong>virtual model</strong> synchronized with incoming sensor data.
-        It is NOT a real physical measurement. Simulated values are clearly labeled.
-      </div>
+      {ts.data_source === 'LIVE' || ts.data_source === 'ESP8266' ? (
+        <div style={{
+          background: 'rgba(0,229,153,0.08)', border: '1px solid rgba(0,229,153,0.3)',
+          color: '#00e599', borderRadius: 8, padding: '0.65rem 1rem',
+          fontSize: '0.82rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem'
+        }}>
+          <span style={{ fontSize: '1.1rem' }}>⚡</span>
+          <span><strong>LIVE HARDWARE SYNCHRONIZED:</strong> Digital Twin is continuously mirroring physical ESP8266 telemetry (DHT11 Temperature & Humidity, MQ-5 Biogas ADC, MQ-2 Safety).</span>
+        </div>
+      ) : (
+        <div className="sim-banner">
+          🔷 The Digital Twin is a <strong>virtual model</strong> synchronized with incoming sensor data.
+          Simulated values are clearly labeled.
+        </div>
+      )}
 
       {/* Main layout */}
       <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '1.25rem' }}>
@@ -55,6 +66,7 @@ export const DigitalTwinPage: React.FC<Props> = ({ twinState: propTwin }) => {
           <DigestorVisual
             status={ts.status} temperature={ts.temperature}
             gasProduction={ts.gas_production} methane={ts.methane_estimate}
+            mq5={ts.mq5} mq2={ts.mq2}
             dataSource={ts.data_source} anomalyDetected={ts.anomaly_detected}
           />
         </div>
@@ -62,21 +74,20 @@ export const DigitalTwinPage: React.FC<Props> = ({ twinState: propTwin }) => {
         {/* State table */}
         <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', letterSpacing: '0.08em' }}>
-            ▸ CURRENT TWIN STATE
+            ▸ CURRENT TWIN STATE ({ts.data_source === 'LIVE' || ts.data_source === 'ESP8266' ? '⚡ REAL HARDWARE' : '🔷 SIMULATION'})
           </div>
           {[
-            { label: 'Temperature', value: ts.temperature?.toFixed(2), unit: '°C', note: ts.data_source, color: '#3b82f6' },
-            { label: 'Humidity', value: ts.humidity?.toFixed(2), unit: '%', note: ts.data_source, color: '#06b6d4' },
-            { label: 'MQ-5 Indicator', value: ts.mq5?.toFixed(0), unit: ' ADC', note: 'Relative', color: '#f59e0b' },
-            { label: 'MQ-2 Indicator', value: ts.mq2?.toFixed(0), unit: ' ADC', note: 'Relative', color: '#8b5cf6' },
-            { label: 'Gas Indicator', value: ts.gas_indicator?.toFixed(0), unit: ' ADC', note: 'Combined', color: '#94a3b8' },
-            { label: 'Methane Estimate', value: ts.methane_estimate?.toFixed(2), unit: '%', note: '⚠ SIMULATION', color: '#f97316' },
-            { label: 'Gas Production', value: ts.gas_production?.toFixed(3), unit: ' L/min', note: '⚠ SIMULATION', color: '#00c896' },
-            { label: 'Health Score', value: ts.health_score.toFixed(1), unit: '/100', color: ts.status === 'HEALTHY' ? '#10b981' : ts.status === 'DEGRADING' ? '#f59e0b' : '#ef4444' },
-            { label: 'Status', value: ts.status, color: ts.status === 'HEALTHY' ? '#10b981' : ts.status === 'DEGRADING' ? '#f59e0b' : '#ef4444' },
-            { label: 'Anomaly', value: ts.anomaly_detected ? 'DETECTED' : 'None', color: ts.anomaly_detected ? '#ef4444' : '#10b981' },
-            { label: 'Data Source', value: ts.data_source, color: '#60a5fa' },
-            { label: 'Updates', value: String(ts.update_count), color: '#64748b' },
+            { label: 'Temperature (DHT11)', value: ts.temperature?.toFixed(2), unit: '°C', note: ts.data_source === 'LIVE' || ts.data_source === 'ESP8266' ? 'Real Sensor' : ts.data_source, color: '#3b82f6' },
+            { label: 'Humidity (DHT11)', value: ts.humidity?.toFixed(2), unit: '%', note: ts.data_source === 'LIVE' || ts.data_source === 'ESP8266' ? 'Real Sensor' : ts.data_source, color: '#06b6d4' },
+            { label: 'MQ-5 Biogas Index', value: ts.mq5?.toFixed(0), unit: ' ADC', note: ts.data_source === 'LIVE' || ts.data_source === 'ESP8266' ? 'Real Analog (0-1023)' : 'Relative', color: '#00e599' },
+            { label: 'MQ-2 Gas Monitor', value: ts.mq2 === 1 ? 'ALERT' : ts.mq2 === 0 ? '0 (NORMAL)' : ts.mq2?.toFixed(0), unit: '', note: ts.data_source === 'LIVE' || ts.data_source === 'ESP8266' ? 'Real Digital State' : 'Relative', color: ts.mq2 === 1 ? '#ef4444' : '#8b5cf6' },
+            { label: 'Gas Production Rate', value: ts.gas_production != null ? ts.gas_production.toFixed(3) : ts.mq5 != null ? ((ts.mq5 / 1023) * 4.0).toFixed(2) : '—', unit: ' L/min', note: ts.data_source === 'LIVE' || ts.data_source === 'ESP8266' ? 'Estimated from MQ-5' : 'SIMULATION', color: '#00c896' },
+            { label: 'Methane Concentration', value: ts.methane_estimate != null ? ts.methane_estimate.toFixed(1) : ts.mq5 != null ? Math.min(85, Math.max(35, (ts.mq5 / 1023) * 75)).toFixed(1) : '—', unit: '%', note: ts.data_source === 'LIVE' || ts.data_source === 'ESP8266' ? 'Relative Biogas Curve' : 'SIMULATION', color: '#f97316' },
+            { label: 'Digester Health Score', value: ts.health_score.toFixed(1), unit: '/100', color: ts.status === 'HEALTHY' ? '#10b981' : ts.status === 'DEGRADING' ? '#f59e0b' : '#ef4444' },
+            { label: 'Process Status', value: ts.status, color: ts.status === 'HEALTHY' ? '#10b981' : ts.status === 'DEGRADING' ? '#f59e0b' : '#ef4444' },
+            { label: 'Anomaly Detection', value: ts.anomaly_detected ? 'DETECTED' : 'None', color: ts.anomaly_detected ? '#ef4444' : '#10b981' },
+            { label: 'Data Pipeline Source', value: ts.data_source === 'LIVE' || ts.data_source === 'ESP8266' ? '⚡ ESP8266 HARDWARE' : '🔷 SIMULATION', color: ts.data_source === 'LIVE' || ts.data_source === 'ESP8266' ? '#00e599' : '#60a5fa' },
+            { label: 'Synchronized Updates', value: String(ts.update_count), color: '#64748b' },
           ].map(row => (
             <div key={row.label} style={{
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',

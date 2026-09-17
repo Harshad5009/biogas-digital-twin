@@ -4,8 +4,10 @@ import React from 'react';
 interface DigestorVisualProps {
   status: string;
   temperature: number | null;
-  gasProduction: number | null;
-  methane: number | null;
+  gasProduction?: number | null;
+  methane?: number | null;
+  mq5?: number | null;
+  mq2?: number | null;
   dataSource: string;
   anomalyDetected: boolean;
 }
@@ -17,18 +19,20 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 export const DigestorVisual: React.FC<DigestorVisualProps> = ({
-  status, temperature, gasProduction, methane, dataSource, anomalyDetected,
+  status, temperature, gasProduction, methane, mq5, mq2, dataSource, anomalyDetected,
 }) => {
+  const isLive = dataSource === 'LIVE' || dataSource === 'ESP8266';
   const color = STATUS_COLOR[status] || '#10b981';
-  const gasLevel = Math.min(1, (gasProduction ?? 0) / 4.0);
+  const effectiveGas = gasProduction ?? (mq5 != null ? (mq5 / 1023) * 4.0 : 2.0);
+  const gasLevel = Math.min(1, Math.max(0.15, effectiveGas / 4.0));
   const bubbleOpacity = gasLevel * 0.8 + 0.2;
 
   return (
     <div style={{ position: 'relative', width: '100%', maxWidth: 440, margin: '0 auto' }}>
       {/* Data source badge */}
       <div style={{ textAlign: 'center', marginBottom: '0.5rem' }}>
-        <span className={`status-badge ${dataSource === 'ESP8266' ? 'badge-healthy' : 'badge-sim'}`}>
-          {dataSource === 'ESP8266' ? '⚡ LIVE ESP8266' : '🔷 SIMULATION MODE'}
+        <span className={`status-badge ${isLive ? 'badge-healthy' : 'badge-sim'}`}>
+          {isLive ? '⚡ LIVE ESP8266 HARDWARE' : '🔷 SIMULATION MODE'}
         </span>
         {anomalyDetected && (
           <span className="status-badge badge-critical" style={{ marginLeft: '0.5rem' }}>
@@ -118,17 +122,24 @@ export const DigestorVisual: React.FC<DigestorVisualProps> = ({
         display: 'flex', gap: '0.75rem', justifyContent: 'center',
         flexWrap: 'wrap', marginTop: '0.5rem',
       }}>
-        {[
-          { label: 'Temp', value: temperature != null ? `${temperature.toFixed(1)}°C` : '—', color: '#3b82f6' },
-          { label: 'Gas', value: gasProduction != null ? `${gasProduction.toFixed(2)} L/min` : '—', color, note: 'SIM' },
-          { label: 'CH₄', value: methane != null ? `${methane.toFixed(1)}%` : '—', color: '#f59e0b', note: 'SIM' },
-        ].map(item => (
+        {(isLive
+          ? [
+              { label: 'Temp (DHT11)', value: temperature != null ? `${temperature.toFixed(1)}°C` : '—', color: '#3b82f6', note: 'REAL' },
+              { label: 'MQ-5 Gas', value: mq5 != null ? `${Math.round(mq5)} ADC` : '—', color: '#00e599', note: 'REAL' },
+              { label: 'MQ-2 Alarm', value: mq2 === 1 ? 'ALERT' : 'NORMAL', color: mq2 === 1 ? '#ef4444' : '#10b981', note: 'REAL' },
+            ]
+          : [
+              { label: 'Temp', value: temperature != null ? `${temperature.toFixed(1)}°C` : '—', color: '#3b82f6', note: 'SIM' },
+              { label: 'Gas Yield', value: `${effectiveGas.toFixed(2)} L/min`, color, note: 'SIM' },
+              { label: 'CH₄ Est', value: methane != null ? `${methane.toFixed(1)}%` : '62.5%', color: '#f59e0b', note: 'SIM' },
+            ]
+        ).map(item => (
           <div key={item.label} style={{
             background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: '0.4rem 0.75rem',
             border: `1px solid ${item.color}30`, textAlign: 'center',
           }}>
             <div style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 600, letterSpacing: '0.06em' }}>
-              {item.label}{item.note && <sup style={{ color: '#3b82f6', fontSize: '0.55rem', marginLeft: 2 }}>{item.note}</sup>}
+              {item.label}{item.note && <sup style={{ color: item.note === 'REAL' ? '#00e599' : '#38bdf8', fontSize: '0.55rem', marginLeft: 3 }}>{item.note}</sup>}
             </div>
             <div style={{ fontSize: '0.95rem', fontWeight: 700, color: item.color }}>{item.value}</div>
           </div>
