@@ -18,7 +18,7 @@ const MENU_ITEMS = [
   { path: '/history', label: 'Historical Data', icon: <History size={18} /> },
   { path: '/analytics', label: 'Analytics', icon: <TrendingUp size={18} /> },
   { path: '/prediction', label: 'Predictions', icon: <LineChart size={18} /> },
-  { path: '/anomalies', label: 'Alerts', icon: <Bell size={18} />, badge: 2 },
+  { path: '/anomalies', label: 'Alerts', icon: <Bell size={18} />, isAlert: true },
   { path: '/whatif', label: 'What-if Simulation', icon: <Sliders size={18} /> },
   { path: '/reports', label: 'Reports', icon: <FileText size={18} /> },
   { path: '/settings', label: 'Settings', icon: <Settings size={18} /> },
@@ -27,6 +27,7 @@ const MENU_ITEMS = [
 export const Sidebar: React.FC<SidebarProps> = ({ connected, twinState }) => {
   const status = twinState?.status ?? 'HEALTHY';
   const statusColor = status === 'HEALTHY' ? '#10b981' : status === 'DEGRADING' ? '#f59e0b' : '#ef4444';
+  const hasAnomaly = !!twinState?.anomaly_detected;
 
   return (
     <aside style={{
@@ -36,34 +37,37 @@ export const Sidebar: React.FC<SidebarProps> = ({ connected, twinState }) => {
     }}>
       {/* Navigation Links */}
       <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-        {MENU_ITEMS.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            style={({ isActive }) => ({
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '0.55rem 0.85rem', borderRadius: 8, textDecoration: 'none',
-              fontSize: '0.82rem', fontWeight: 500,
-              color: isActive ? '#00e599' : '#94a3b8',
-              background: isActive ? 'rgba(0, 229, 153, 0.08)' : 'transparent',
-              border: isActive ? '1px solid rgba(0, 229, 153, 0.25)' : '1px solid transparent',
-              transition: 'all 0.15s ease'
-            })}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-              {item.icon}
-              <span>{item.label}</span>
-            </div>
-            {item.badge && (
-              <span style={{
-                background: '#ef4444', color: '#fff', fontSize: '0.65rem',
-                fontWeight: 700, padding: '1px 6px', borderRadius: 999
-              }}>
-                {item.badge}
-              </span>
-            )}
-          </NavLink>
-        ))}
+        {MENU_ITEMS.map((item) => {
+          const showBadge = item.isAlert && hasAnomaly;
+          return (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              style={({ isActive }) => ({
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '0.55rem 0.85rem', borderRadius: 8, textDecoration: 'none',
+                fontSize: '0.82rem', fontWeight: 500,
+                color: isActive ? '#00e599' : '#94a3b8',
+                background: isActive ? 'rgba(0, 229, 153, 0.08)' : 'transparent',
+                border: isActive ? '1px solid rgba(0, 229, 153, 0.25)' : '1px solid transparent',
+                transition: 'all 0.15s ease'
+              })}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                {item.icon}
+                <span>{item.label}</span>
+              </div>
+              {showBadge && (
+                <span style={{
+                  background: '#ef4444', color: '#fff', fontSize: '0.65rem',
+                  fontWeight: 700, padding: '1px 6px', borderRadius: 999
+                }}>
+                  !
+                </span>
+              )}
+            </NavLink>
+          );
+        })}
       </nav>
 
       {/* Bottom Status Card */}

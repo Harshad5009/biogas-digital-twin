@@ -6,11 +6,14 @@ import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 
 import { Dashboard } from './pages/Dashboard';
+import { DigitalTwinPage } from './pages/DigitalTwinPage';
 import { SensorsPage } from './pages/SensorsPage';
 import { HistoryPage } from './pages/HistoryPage';
+import { AnalyticsPage } from './pages/AnalyticsPage';
 import { AnomalyPage } from './pages/AnomalyPage';
 import { PredictionPage } from './pages/PredictionPage';
 import { WhatIfPage } from './pages/WhatIfPage';
+import { ReportsPage } from './pages/ReportsPage';
 import { SettingsPage } from './pages/SettingsPage';
 
 export const App: React.FC = () => {
@@ -50,7 +53,7 @@ export const App: React.FC = () => {
           >
             <Routes>
               <Route path="/" element={<Dashboard twinState={twinState} connected={connected} />} />
-              <Route path="/twin" element={<Dashboard twinState={twinState} connected={connected} />} />
+              <Route path="/twin" element={<DigitalTwinPage twinState={twinState} />} />
 
               <Route
                 path="/sensors"
@@ -58,7 +61,7 @@ export const App: React.FC = () => {
               />
 
               <Route path="/history" element={<HistoryPage />} />
-              <Route path="/analytics" element={<HistoryPage />} />
+              <Route path="/analytics" element={<AnalyticsPage twinState={twinState} />} />
 
               <Route
                 path="/prediction"
@@ -75,7 +78,7 @@ export const App: React.FC = () => {
                 element={<WhatIfPage twinState={twinState} />}
               />
 
-              <Route path="/reports" element={<HistoryPage />} />
+              <Route path="/reports" element={<ReportsPage twinState={twinState} />} />
 
               <Route
                 path="/settings"

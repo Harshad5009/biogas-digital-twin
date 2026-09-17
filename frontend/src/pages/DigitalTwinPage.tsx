@@ -8,16 +8,28 @@ import { useEffect, useState } from 'react';
 
 interface Props { twinState: TwinState | null; }
 
-export const DigitalTwinPage: React.FC<Props> = ({ twinState: ts }) => {
+export const DigitalTwinPage: React.FC<Props> = ({ twinState: propTwin }) => {
+  const [activeTwin, setActiveTwin] = useState<TwinState | null>(propTwin);
   const [healthDetail, setHealthDetail] = useState<Record<string, unknown> | null>(null);
+
+  useEffect(() => {
+    if (propTwin) {
+      setActiveTwin(propTwin);
+    } else {
+      twinApi.getState().then((s) => s && setActiveTwin(s)).catch(() => {});
+    }
+  }, [propTwin]);
+
+  const ts = activeTwin;
 
   useEffect(() => {
     twinApi.getHealth().then((d: unknown) => setHealthDetail(d as Record<string, unknown>)).catch(() => {});
   }, [ts?.update_count]);
 
   if (!ts) return (
-    <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
-      Waiting for Digital Twin data...
+    <div style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>
+      <div style={{ display: 'inline-block', width: 28, height: 28, border: '3px solid rgba(0,229,153,0.2)', borderTopColor: '#00e599', borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: '1rem' }} />
+      <div>Synchronizing Digital Twin with plant telemetry...</div>
     </div>
   );
 
