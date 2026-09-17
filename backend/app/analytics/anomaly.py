@@ -19,7 +19,8 @@ THRESHOLDS = {
     "humidity_min":         30.0,    # %
     "humidity_max":         95.0,    # %
     "mq5_spike":            200.0,   # ADC units change between readings
-    "mq2_spike":            200.0,   # ADC units change between readings
+    # NOTE: MQ-2 from ESP8266 is a digital 0/1 value (NORMAL/ALERT), NOT an ADC value.
+    # Do not apply ADC-based spike detection on it — use mq2_alert_detected flag instead.
     "gas_production_min":   0.3,     # L/min (simulation)
     "gas_drop_pct":         30.0,    # % drop from recent mean
 }
@@ -81,10 +82,13 @@ def rule_based_check(
             anomaly = True
             reasons.append(f"Sudden MQ-5 change ({abs(mq5 - prev_mq5):.0f} units)")
 
-    if mq2 is not None and prev_mq2 is not None:
-        if abs(mq2 - prev_mq2) > THRESHOLDS["mq2_spike"]:
-            anomaly = True
-            reasons.append(f"Sudden MQ-2 change ({abs(mq2 - prev_mq2):.0f} units)")
+    # MQ-2 is a digital 0/1 signal from ESP8266 (0=NORMAL, 1=ALERT).
+    # Only flag anomaly when it is actually in ALERT state (value == 1).
+    # Do NOT compare mq2 deltas — a 0→1 transition is only 1 unit and simulation
+    # MQ-2 (~320 ADC) vs live MQ-2 (0/1) would always trigger a false alarm.
+    if mq2 is not None and mq2 >= 1:
+        anomaly = True
+        reasons.append("MQ-2 gas sensor threshold exceeded (ALERT state)")
 
     if gas_production is not None:
         if gas_production < THRESHOLDS["gas_production_min"]:

@@ -313,10 +313,14 @@ class MQTTClient:
                 )
                 return
 
-            # Ignore alert/command payloads that might have arrived
-            if "command" in payload and not ("temperature" in payload or "mq5_analog" in payload or "mq5" in payload):
+            # Ignore alert/command or non-measurement payloads that might have arrived
+            has_sensor_fields = any(
+                k in payload
+                for k in ("temperature", "humidity", "mq5_analog", "mq5", "mq2", "mq2_status")
+            )
+            if not has_sensor_fields or ("command" in payload and "temperature" not in payload):
                 logger.info(
-                    "Ignoring non-sensor command/alert message on topic %s",
+                    "Ignoring non-sensor message on topic %s",
                     msg.topic,
                 )
                 return

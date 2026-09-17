@@ -213,6 +213,14 @@ async def process_sensor_data(data: dict):
     5. Store alerts if an anomaly is detected
     6. Broadcast updated data through WebSocket
     """
+    # Filter: Ignore non-sensor payloads (alerts, commands, empty messages)
+    has_sensor_data = any(
+        data.get(k) is not None
+        for k in ("temperature", "humidity", "mq5", "mq5_analog", "mq2", "mq2_status", "gas_production", "methane")
+    )
+    if not has_sensor_data:
+        logger.debug("Skipping process_sensor_data for non-sensor payload: %s", data)
+        return
 
     db = SessionLocal()
     twin_state = None

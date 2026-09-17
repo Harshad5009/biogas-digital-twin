@@ -164,6 +164,11 @@ class DigitalTwin:
         self.mode = mode_upper
         logger.info(f"Digital Twin active mode set to: {self.mode}")
 
+        # Clear previous cross-mode comparison values so we don't trigger false anomaly spikes
+        self._prev_temperature = None
+        self._prev_mq5 = None
+        self._prev_mq2 = None
+
         if self.mode == "LIVE":
             if self.last_live_reading is not None:
                 self._apply_data(self.last_live_reading)
@@ -215,6 +220,15 @@ class DigitalTwin:
         Update the Digital Twin with new sensor data while strictly preserving
         source separation between LIVE hardware and SIMULATION data.
         """
+        # Guard: Ignore empty or non-sensor messages (alerts, commands, heartbeats)
+        has_sensors = any(
+            data.get(k) is not None
+            for k in ("temperature", "humidity", "mq5", "mq5_analog", "mq2", "mq2_status", "gas_production", "methane")
+        )
+        if not has_sensors:
+            logger.debug("Ignoring sensor update payload without measurement fields: %s", data)
+            return self.to_dict()
+
         source = str(data.get("source", "")).upper()
 
         if source in ["LIVE", "ESP8266"]:
@@ -245,33 +259,28 @@ class DigitalTwin:
 
     def _apply_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Apply sensor data to the virtual twin calculations."""
-        # 1. Store previous values
-        self._prev_temperature = self.temperature
-        self._prev_mq5 = self.mq5
-        self._prev_mq2 = self.mq2
+        new_temp = self._safe_float(data.get("temperature"))
+        new_hum = self._safe_float(data.get("humidity"))
+        new_mq5 = self._safe_float(data.get("mq5", data.get("mq5_analog")))
+        new_mq2 = self._normalize_mq2(data)
+        new_methane = self._safe_float(data.get("methane"))
+        new_gas = self._safe_float(data.get("gas_production"))
 
-        # 2. Update current values
-        self.temperature = self._safe_float(
-            data.get("temperature")
-        )
-
-        self.humidity = self._safe_float(
-            data.get("humidity")
-        )
-
-        self.mq5 = self._safe_float(
-            data.get("mq5", data.get("mq5_analog"))
-        )
-
-        self.mq2 = self._normalize_mq2(data)
-
-        self.methane_estimate = self._safe_float(
-            data.get("methane")
-        )
-
-        self.gas_production = self._safe_float(
-            data.get("gas_production")
-        )
+        if new_temp is not None:
+            self._prev_temperature = self.temperature
+            self.temperature = new_temp
+        if new_hum is not None:
+            self.humidity = new_hum
+        if new_mq5 is not None:
+            self._prev_mq5 = self.mq5
+            self.mq5 = new_mq5
+        if new_mq2 is not None:
+            self._prev_mq2 = self.mq2
+            self.mq2 = new_mq2
+        if new_methane is not None:
+            self.methane_estimate = new_methane
+        if new_gas is not None:
+            self.gas_production = new_gas
 
         # Normalize source tag
         raw_source = str(data.get("source", "LIVE")).upper()
