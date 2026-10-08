@@ -2,13 +2,15 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Box, Activity, History,
-  TrendingUp, LineChart, Bell, Sliders, FileText, Settings, ShieldCheck, Wifi, Clock
+  TrendingUp, LineChart, Bell, Sliders, FileText, Settings, ShieldCheck, Wifi, Clock, X
 } from 'lucide-react';
 import type { TwinState } from '../types';
 
 interface SidebarProps {
   connected: boolean;
   twinState: TwinState | null;
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
 const MENU_ITEMS = [
@@ -24,17 +26,51 @@ const MENU_ITEMS = [
   { path: '/settings', label: 'Settings', icon: <Settings size={18} /> },
 ];
 
-export const Sidebar: React.FC<SidebarProps> = ({ connected, twinState }) => {
+export const Sidebar: React.FC<SidebarProps> = ({
+  connected,
+  twinState,
+  isOpen = false,
+  onClose,
+}) => {
   const status = twinState?.status ?? 'HEALTHY';
   const statusColor = status === 'HEALTHY' ? '#10b981' : status === 'DEGRADING' ? '#f59e0b' : '#ef4444';
   const hasAnomaly = !!twinState?.anomaly_detected;
 
   return (
-    <aside style={{
-      width: 220, background: '#080f1b', borderRight: '1px solid rgba(255,255,255,0.06)',
-      display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-      padding: '1rem 0.75rem', height: 'calc(100vh - 60px)', position: 'sticky', top: 60
-    }}>
+    <>
+      {/* Mobile Drawer Backdrop */}
+      {isOpen && (
+        <div
+          className="sidebar-backdrop"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
+
+      <aside className={`sidebar-container ${isOpen ? 'sidebar-open' : ''}`}>
+        {/* Mobile Header with Close Button */}
+        <div className="sidebar-mobile-header">
+          <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#00e599' }}>
+            NAVIGATION
+          </span>
+          <button
+            onClick={onClose}
+            aria-label="Close menu"
+            style={{
+              background: 'rgba(255,255,255,0.06)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              color: '#94a3b8',
+              borderRadius: 6,
+              padding: '4px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <X size={18} />
+          </button>
+        </div>
       {/* Navigation Links */}
       <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
         {MENU_ITEMS.map((item) => {
@@ -43,6 +79,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ connected, twinState }) => {
             <NavLink
               key={item.path}
               to={item.path}
+              onClick={onClose}
               style={({ isActive }) => ({
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 padding: '0.55rem 0.85rem', borderRadius: 8, textDecoration: 'none',
@@ -115,5 +152,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ connected, twinState }) => {
         </div>
       </div>
     </aside>
-  );
+  </>
+);
 };

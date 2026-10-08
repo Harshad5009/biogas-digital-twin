@@ -18,6 +18,10 @@ import { SettingsPage } from './pages/SettingsPage';
 
 export const App: React.FC = () => {
   const { twinState, connected } = useWebSocket();
+  const [sidebarOpen, setSidebarOpen] = React.useState(false);
+
+  const toggleSidebar = () => setSidebarOpen((prev) => !prev);
+  const closeSidebar = () => setSidebarOpen(false);
 
   return (
     <Router>
@@ -31,7 +35,12 @@ export const App: React.FC = () => {
         }}
       >
         {/* Top Header Bar */}
-        <Header twinState={twinState} connected={connected} />
+        <Header
+          twinState={twinState}
+          connected={connected}
+          sidebarOpen={sidebarOpen}
+          onToggleSidebar={toggleSidebar}
+        />
 
         {/* Main Content Area: Sidebar + Body */}
         <div
@@ -39,16 +48,25 @@ export const App: React.FC = () => {
             display: 'flex',
             flex: 1,
             overflow: 'hidden',
+            position: 'relative',
           }}
         >
-          <Sidebar connected={connected} twinState={twinState} />
+          <Sidebar
+            connected={connected}
+            twinState={twinState}
+            isOpen={sidebarOpen}
+            onClose={closeSidebar}
+          />
 
           <main
+            className="main-viewport"
             style={{
               flex: 1,
               height: 'calc(100vh - 60px)',
               overflowY: 'auto',
               background: 'var(--bg-main)',
+              width: '100%',
+              minWidth: 0,
             }}
           >
             <Routes>

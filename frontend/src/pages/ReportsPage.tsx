@@ -111,7 +111,7 @@ export const ReportsPage: React.FC<Props> = ({ twinState: propTwin }) => {
     : '235';
 
   return (
-    <div style={{ padding: '1.5rem', maxWidth: 1200, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+    <div className="page-container" style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       {/* Header and Controls */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
@@ -184,7 +184,7 @@ export const ReportsPage: React.FC<Props> = ({ twinState: propTwin }) => {
         </div>
 
         {/* Metric Highlights */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))', gap: '1rem' }}>
           <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.75rem', borderRadius: 8, border: '1px solid rgba(255,255,255,0.04)' }}>
             <div style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 600 }}>SYSTEM HEALTH</div>
             <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#00e599' }}>{twin?.health_score ?? 85.0} / 100</div>

@@ -165,7 +165,7 @@ export const PredictionPage: React.FC<Props> = ({ twinState: ts }) => {
   );
 
   return (
-    <div style={{ padding: '1.5rem', maxWidth: 1200, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+    <div className="page-container" style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       <h1 style={{ fontSize: '1.4rem', fontWeight: 800 }}><span className="gradient-text">Trained Machine Learning Predictive Analysis</span></h1>
 
       {/* Source Banner */}
@@ -195,7 +195,7 @@ export const PredictionPage: React.FC<Props> = ({ twinState: ts }) => {
       )}
 
       {/* Prediction Cards Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.25rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '1.25rem' }}>
         <PredCard
           pred={gasPred}
           title="GAS PRODUCTION (RANDOM FOREST)"
@@ -231,7 +231,7 @@ export const PredictionPage: React.FC<Props> = ({ twinState: ts }) => {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 250px), 1fr))', gap: '1rem', marginBottom: '1rem' }}>
             {/* Gas Model */}
             <div style={{ background: 'rgba(0,0,0,0.25)', padding: '0.85rem', borderRadius: 8, border: '1px solid rgba(255,255,255,0.05)' }}>
               <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#00e599', marginBottom: '0.3rem' }}>

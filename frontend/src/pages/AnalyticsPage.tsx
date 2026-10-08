@@ -113,7 +113,7 @@ export const AnalyticsPage: React.FC<Props> = ({ twinState: propTwin }) => {
   }));
 
   return (
-    <div style={{ padding: '1.5rem', maxWidth: 1350, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+    <div className="page-container" style={{ maxWidth: 1350, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
@@ -141,7 +141,7 @@ export const AnalyticsPage: React.FC<Props> = ({ twinState: propTwin }) => {
       </div>
 
       {/* KPI Cards Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '1rem' }}>
         <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(0, 229, 153, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Compass size={22} color="#00e599" />
@@ -188,7 +188,7 @@ export const AnalyticsPage: React.FC<Props> = ({ twinState: propTwin }) => {
       </div>
 
       {/* Main Grid: Multi-parameter Trend + Radar Analysis */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '1.25rem' }}>
+      <div className="responsive-split-grid">
         {/* Dynamic Correlation Chart */}
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>

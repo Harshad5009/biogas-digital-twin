@@ -1072,3 +1072,313 @@ body,
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+
+/* ─────────────────────────────────────────────────── */
+/* RESPONSIVE LAYOUT & NAVIGATION DRAWER               */
+/* ─────────────────────────────────────────────────── */
+
+.page-container {
+  padding: 1.5rem;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.responsive-split-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 1.25rem;
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* App Header Layout */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 1.25rem;
+  background: #080f1c;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.header-center {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.header-menu-btn {
+  display: none;
+}
+
+/* Sidebar Drawer Desktop Styles */
+.sidebar-container {
+  width: 220px;
+  background: #080f1b;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1rem 0.75rem;
+  height: calc(100vh - 60px);
+  position: sticky;
+  top: 60px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sidebar-mobile-header {
+  display: none;
+}
+
+.sidebar-backdrop {
+  display: none;
+}
+
+/* ─────────────────────────────────────────────────── */
+/* MEDIA QUERIES: TABLET & DESKTOP COLLAPSE (<= 1024px) */
+/* ─────────────────────────────────────────────────── */
+
+@media (max-width: 1024px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .lower-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .responsive-split-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ─────────────────────────────────────────────────── */
+/* MEDIA QUERIES: MOBILE & DRAWER NAVIGATION (<= 900px) */
+/* ─────────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  .header-menu-btn {
+    display: flex !important;
+  }
+
+  .sidebar-container {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    width: 280px !important;
+    max-width: 85vw !important;
+    height: 100vh !important;
+    z-index: 100 !important;
+    background: #080f1c !important;
+    box-shadow: 4px 0 28px rgba(0, 0, 0, 0.7) !important;
+    transform: translateX(-100%);
+    overflow-y: auto;
+  }
+
+  .sidebar-container.sidebar-open {
+    transform: translateX(0) !important;
+  }
+
+  .sidebar-backdrop {
+    display: block !important;
+    position: fixed !important;
+    inset: 0 !important;
+    background: rgba(0, 0, 0, 0.75) !important;
+    backdrop-filter: blur(4px) !important;
+    -webkit-backdrop-filter: blur(4px) !important;
+    z-index: 99 !important;
+  }
+
+  .sidebar-mobile-header {
+    display: flex !important;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .main-viewport {
+    height: calc(100vh - 60px) !important;
+    width: 100% !important;
+  }
+}
+
+/* ─────────────────────────────────────────────────── */
+/* MEDIA QUERIES: PHONE SCREENS (<= 640px)             */
+/* ─────────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .page-container {
+    padding: 0.85rem !important;
+  }
+
+  .dashboard-page {
+    padding: 12px !important;
+  }
+
+  .dashboard-heading {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+    margin-bottom: 14px !important;
+  }
+
+  .dashboard-heading h1 {
+    font-size: 1.3rem !important;
+  }
+
+  .header-clock {
+    display: none !important;
+  }
+
+  .header-subtitle {
+    display: none !important;
+  }
+
+  .app-header {
+    padding: 0.5rem 0.75rem !important;
+  }
+
+  .digital-twin-card {
+    min-height: 480px !important;
+  }
+
+  .virtual-plant {
+    min-height: 440px !important;
+  }
+
+  .digital-twin-title {
+    top: 10px !important;
+    left: 10px !important;
+    padding: 6px 10px !important;
+    max-width: 200px !important;
+  }
+
+  .digital-twin-title h2 {
+    font-size: 11px !important;
+  }
+
+  .digital-twin-title p {
+    font-size: 10px !important;
+  }
+
+  /* Scaled badges in 3D Virtual Plant */
+  .plant-info,
+  .plant-badge {
+    min-width: 105px !important;
+    padding: 6px 8px !important;
+    border-radius: 6px !important;
+  }
+
+  .plant-info span,
+  .plant-badge > div:first-child {
+    font-size: 8.5px !important;
+    margin-bottom: 2px !important;
+  }
+
+  .plant-info strong,
+  .plant-badge > div:nth-child(2) {
+    font-size: 11px !important;
+  }
+
+  .plant-info small,
+  .plant-badge > div:nth-child(3) {
+    font-size: 8px !important;
+    margin-top: 2px !important;
+  }
+
+  .gas-holder-info,
+  .badge-gas-holder {
+    top: 130px !important;
+    left: 8px !important;
+  }
+
+  .digester-info,
+  .badge-digester {
+    top: 75px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+  }
+
+  .outlet-info,
+  .badge-gas-outlet {
+    top: 130px !important;
+    right: 8px !important;
+  }
+
+  .feed-info,
+  .badge-feed-tank {
+    bottom: 12px !important;
+    left: 8px !important;
+  }
+
+  .slurry-info,
+  .badge-slurry-outlet {
+    bottom: 12px !important;
+    right: 8px !important;
+  }
+
+  .sensor-card {
+    padding: 14px !important;
+  }
+
+  .sensor-grid {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+
+  .prediction-grid {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+
+  .health-card,
+  .trend-card,
+  .prediction-card {
+    padding: 14px !important;
+  }
+
+  .health-content {
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+    gap: 12px !important;
+  }
+
+  .health-circle {
+    width: 90px !important;
+    height: 90px !important;
+    border-width: 6px !important;
+  }
+
+  .health-circle strong {
+    font-size: 22px !important;
+  }
+}

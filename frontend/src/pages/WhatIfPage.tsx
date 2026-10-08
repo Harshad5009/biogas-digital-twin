@@ -47,7 +47,7 @@ export const WhatIfPage: React.FC<Props> = ({ twinState: ts }) => {
   );
 
   return (
-    <div style={{ padding: '1.5rem', maxWidth: 1100, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+    <div className="page-container" style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       <h1 style={{ fontSize: '1.4rem', fontWeight: 800 }}><span className="gradient-text">What-If Simulation</span></h1>
 
       {/* Big disclaimer */}
@@ -66,7 +66,7 @@ export const WhatIfPage: React.FC<Props> = ({ twinState: ts }) => {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+      <div className="responsive-split-grid">
         {/* Input controls */}
         <div className="card">
           <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', letterSpacing: '0.08em', marginBottom: '1rem' }}>

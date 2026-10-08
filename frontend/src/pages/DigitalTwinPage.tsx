@@ -36,7 +36,7 @@ export const DigitalTwinPage: React.FC<Props> = ({ twinState: propTwin }) => {
   const factors = (healthDetail?.factors as Array<Record<string, unknown>>) ?? [];
 
   return (
-    <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem', maxWidth: 1300, margin: '0 auto' }}>
+    <div className="page-container" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', maxWidth: 1300, margin: '0 auto' }}>
       <h1 style={{ fontSize: '1.4rem', fontWeight: 800 }}>
         <span className="gradient-text">Digital Twin State</span>
       </h1>
@@ -57,7 +57,7 @@ export const DigitalTwinPage: React.FC<Props> = ({ twinState: propTwin }) => {
       )}
 
       {/* Main layout */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '1.25rem' }}>
+      <div className="responsive-split-grid">
         {/* Twin Visual */}
         <div className="card">
           <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', letterSpacing: '0.08em', marginBottom: '1rem' }}>

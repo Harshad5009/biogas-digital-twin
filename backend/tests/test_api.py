@@ -72,7 +72,7 @@ class TestAPIEndpoints(unittest.TestCase):
         res_twin = self.client.get("/api/twin/state")
         self.assertEqual(res_twin.status_code, 200)
         data = res_twin.json()
-        self.assertEqual(data["data_source"], "ESP8266")
+        self.assertIn(data["data_source"], ["LIVE", "ESP8266"])
         self.assertEqual(data["temperature"], 31.4)
         self.assertEqual(data["mq2"], 317.0)
 

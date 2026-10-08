@@ -6,9 +6,16 @@ import { simulationApi } from '../services/api';
 interface HeaderProps {
   twinState: TwinState | null;
   connected: boolean;
+  sidebarOpen?: boolean;
+  onToggleSidebar?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ twinState, connected }) => {
+export const Header: React.FC<HeaderProps> = ({
+  twinState,
+  connected,
+  sidebarOpen = false,
+  onToggleSidebar,
+}) => {
   const [timeStr, setTimeStr] = useState<string>('');
   const [activeScenario, setActiveScenario] = useState('normal');
   const [simBusy, setSimBusy] = useState(false);
@@ -78,13 +85,9 @@ export const Header: React.FC<HeaderProps> = ({ twinState, connected }) => {
   };
 
   return (
-    <header style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      padding: '0.65rem 1.25rem', background: '#080f1c', borderBottom: '1px solid rgba(255,255,255,0.06)',
-      position: 'sticky', top: 0, zIndex: 30, flexWrap: 'wrap', gap: '0.5rem'
-    }}>
+    <header className="app-header">
       {/* Brand Title */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+      <div className="header-brand">
         <div style={{
           width: 34, height: 34, borderRadius: 8,
           background: 'linear-gradient(135deg, rgba(0,229,153,0.15), rgba(16,185,129,0.3))',
@@ -95,24 +98,24 @@ export const Header: React.FC<HeaderProps> = ({ twinState, connected }) => {
         </div>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', lineHeight: 1.2 }}>
-            <span style={{ fontWeight: 800, fontSize: '1rem', color: '#00e599', letterSpacing: '0.02em' }}>
+            <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#00e599', letterSpacing: '0.02em' }}>
               BIOGAS PLANT
             </span>
-            <span style={{ fontWeight: 800, fontSize: '1rem', color: '#ffffff', letterSpacing: '0.02em' }}>
+            <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#ffffff', letterSpacing: '0.02em' }}>
               DIGITAL TWIN
             </span>
           </div>
-          <div style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 500 }}>
-            Real-time Monitoring &amp; Intelligent Analytics
+          <div className="header-subtitle" style={{ fontSize: '0.62rem', color: '#64748b', fontWeight: 500 }}>
+            Real-time Monitoring &amp; Analytics
           </div>
         </div>
       </div>
 
       {/* Center: Plant Status + Simulation Controls */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: '#94a3b8' }}>
-          <span>Plant ID: <strong style={{ color: '#f8fafc' }}>BG-001</strong></span>
-          <span className="online-pill">
+      <div className="header-center">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.78rem', color: '#94a3b8' }}>
+          <span>Plant: <strong style={{ color: '#f8fafc' }}>BG-001</strong></span>
+          <span className="online-pill" style={{ padding: '2px 8px', fontSize: '0.68rem' }}>
             <span className="pulse-dot" />
             {connected ? 'ONLINE' : 'CONNECTING'}
           </span>
@@ -120,11 +123,11 @@ export const Header: React.FC<HeaderProps> = ({ twinState, connected }) => {
 
         {/* Scenario selector */}
         <div style={{
-          display: 'flex', alignItems: 'center', gap: '0.4rem',
+          display: 'flex', alignItems: 'center', gap: '0.35rem',
           background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
           borderRadius: 6, padding: '2px 6px'
         }}>
-          <span style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>
+          <span style={{ fontSize: '0.62rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>
             Scenario:
           </span>
           <select
@@ -132,7 +135,7 @@ export const Header: React.FC<HeaderProps> = ({ twinState, connected }) => {
             onChange={(e) => handleScenarioChange(e.target.value)}
             style={{
               background: 'transparent', border: 'none', color: '#94a3b8',
-              fontSize: '0.72rem', fontWeight: 700, outline: 'none', cursor: 'pointer'
+              fontSize: '0.72rem', fontWeight: 700, outline: 'none', cursor: 'pointer', maxWidth: 140
             }}
           >
             <option value="normal" style={{ background: '#0c1524', color: '#fff' }}>1. Normal Operation</option>
@@ -143,7 +146,7 @@ export const Header: React.FC<HeaderProps> = ({ twinState, connected }) => {
           </select>
         </div>
 
-        {/* Start Simulation Button (shown when NOT in simulation) */}
+        {/* Start Simulation Button */}
         {!isSimulation && (
           <button
             onClick={handleStartSimulation}
@@ -152,17 +155,17 @@ export const Header: React.FC<HeaderProps> = ({ twinState, connected }) => {
             style={{
               display: 'flex', alignItems: 'center', gap: '0.3rem',
               background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.3)',
-              color: '#38bdf8', padding: '0.3rem 0.65rem', borderRadius: 6,
-              fontSize: '0.72rem', fontWeight: 700, cursor: simBusy ? 'not-allowed' : 'pointer',
+              color: '#38bdf8', padding: '0.28rem 0.55rem', borderRadius: 6,
+              fontSize: '0.7rem', fontWeight: 700, cursor: simBusy ? 'not-allowed' : 'pointer',
               opacity: simBusy ? 0.6 : 1
             }}
           >
-            <Play size={12} />
-            Start Simulation
+            <Play size={11} />
+            Start Sim
           </button>
         )}
 
-        {/* Stop Simulation Button (shown when IN simulation) */}
+        {/* Stop Simulation Button */}
         {isSimulation && (
           <button
             onClick={handleStopSimulation}
@@ -171,43 +174,52 @@ export const Header: React.FC<HeaderProps> = ({ twinState, connected }) => {
             style={{
               display: 'flex', alignItems: 'center', gap: '0.3rem',
               background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
-              color: '#ef4444', padding: '0.3rem 0.65rem', borderRadius: 6,
-              fontSize: '0.72rem', fontWeight: 700, cursor: simBusy ? 'not-allowed' : 'pointer',
+              color: '#ef4444', padding: '0.28rem 0.55rem', borderRadius: 6,
+              fontSize: '0.7rem', fontWeight: 700, cursor: simBusy ? 'not-allowed' : 'pointer',
               opacity: simBusy ? 0.6 : 1
             }}
           >
-            <Square size={12} />
-            Stop Simulation
+            <Square size={11} />
+            Stop Sim
           </button>
         )}
       </div>
 
-      {/* Right: Clock + dynamic status badge */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-          Last Updated: <strong style={{ color: '#94a3b8', fontFamily: 'JetBrains Mono, monospace' }}>{timeStr}</strong>
+      {/* Right: Clock + dynamic status badge + Mobile Menu Toggle */}
+      <div className="header-right">
+        <div className="header-clock" style={{ fontSize: '0.72rem', color: '#64748b' }}>
+          <strong style={{ color: '#94a3b8', fontFamily: 'JetBrains Mono, monospace' }}>{timeStr}</strong>
         </div>
-
-        <button style={{
-          background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: 8, padding: '0.35rem 0.55rem', color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center'
-        }}>
-          <Cloud size={15} />
-        </button>
 
         {/* Dynamic data-source status badge */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: 5,
           background: statusBadge.bg, border: `1px solid ${statusBadge.border}`,
-          color: statusBadge.color, padding: '0.3rem 0.65rem', borderRadius: 8, fontSize: '0.72rem', fontWeight: 700
+          color: statusBadge.color, padding: '0.28rem 0.6rem', borderRadius: 8, fontSize: '0.7rem', fontWeight: 700
         }}>
-          <Radio size={13} />
+          <Radio size={12} />
           <span>{statusBadge.label}</span>
         </div>
 
-        <button style={{
-          background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center'
-        }}>
+        {/* Hamburger Menu Toggle Button */}
+        <button
+          onClick={onToggleSidebar}
+          className="header-menu-btn"
+          aria-label="Toggle navigation menu"
+          title="Toggle Navigation Menu"
+          style={{
+            background: sidebarOpen ? 'rgba(0,229,153,0.15)' : 'rgba(255,255,255,0.05)',
+            border: sidebarOpen ? '1px solid rgba(0,229,153,0.4)' : '1px solid rgba(255,255,255,0.1)',
+            color: sidebarOpen ? '#00e599' : '#cbd5e1',
+            borderRadius: 8,
+            padding: '0.4rem 0.55rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.15s ease',
+          }}
+        >
           <Menu size={18} />
         </button>
       </div>

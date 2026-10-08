@@ -51,7 +51,7 @@ export const DigestorVisual: React.FC<DigestorVisualProps> = ({
       }}>
         {/* Floating Glassmorphic Badges matching 3D structures */}
         {/* Gas Holder (Left) */}
-        <div style={{
+        <div className="plant-badge badge-gas-holder" style={{
           position: 'absolute', top: '22%', left: '4%',
           background: 'rgba(8, 18, 30, 0.82)', backdropFilter: 'blur(10px)',
           border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8,
@@ -64,7 +64,7 @@ export const DigestorVisual: React.FC<DigestorVisualProps> = ({
         </div>
 
         {/* Digester Center */}
-        <div style={{
+        <div className="plant-badge badge-digester" style={{
           position: 'absolute', top: '15%', left: '50%', transform: 'translateX(-50%)',
           background: 'rgba(8, 18, 30, 0.85)', backdropFilter: 'blur(10px)',
           border: '1px solid rgba(255,255,255,0.14)', borderRadius: 8,
@@ -81,7 +81,7 @@ export const DigestorVisual: React.FC<DigestorVisualProps> = ({
         </div>
 
         {/* Gas Outlet (Right) */}
-        <div style={{
+        <div className="plant-badge badge-gas-outlet" style={{
           position: 'absolute', top: '28%', right: '4%',
           background: 'rgba(8, 18, 30, 0.82)', backdropFilter: 'blur(10px)',
           border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8,
@@ -96,7 +96,7 @@ export const DigestorVisual: React.FC<DigestorVisualProps> = ({
         </div>
 
         {/* Inlet Feed Tank (Bottom Left) */}
-        <div style={{
+        <div className="plant-badge badge-feed-tank" style={{
           position: 'absolute', bottom: '10%', left: '4%',
           background: 'rgba(8, 18, 30, 0.82)', backdropFilter: 'blur(10px)',
           border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8,
@@ -109,7 +109,7 @@ export const DigestorVisual: React.FC<DigestorVisualProps> = ({
         </div>
 
         {/* Slurry Outlet (Bottom Right) */}
-        <div style={{
+        <div className="plant-badge badge-slurry-outlet" style={{
           position: 'absolute', bottom: '10%', right: '4%',
           background: 'rgba(8, 18, 30, 0.82)', backdropFilter: 'blur(10px)',
           border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8,

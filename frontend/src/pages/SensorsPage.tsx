@@ -67,7 +67,7 @@ export const SensorsPage: React.FC<Props> = ({ twinState: ts }) => {
   const isSimulation = ds === 'SIMULATION';
 
   return (
-    <div style={{ padding: '1.5rem', maxWidth: 1100, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+    <div className="page-container" style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       <h1 style={{ fontSize: '1.4rem', fontWeight: 800 }}><span className="gradient-text">Live Sensors</span></h1>
 
       {/* Simulation warning banner */}
@@ -129,73 +129,75 @@ export const SensorsPage: React.FC<Props> = ({ twinState: ts }) => {
         <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
           ▸ RAW SENSOR VALUES
         </div>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
-          <thead>
-            <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-              {['Parameter', 'Value', 'Unit', 'Source', 'Note'].map(h => (
-                <th key={h} style={{ textAlign: 'left', padding: '0.5rem 0.75rem', color: '#64748b', fontWeight: 600, fontSize: '0.7rem', letterSpacing: '0.05em' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {[
-              {
-                param: 'Temperature',
-                value: safe(ts?.temperature, 2),
-                unit: '°C',
-                src: ds,
-                note: isSimulation ? 'Simulation estimate' : 'DHT11 sensor (real when ESP8266 connected)'
-              },
-              {
-                param: 'Humidity',
-                value: safe(ts?.humidity, 2),
-                unit: '%',
-                src: ds,
-                note: isSimulation ? 'Simulation estimate' : 'DHT11 sensor (real when ESP8266 connected)'
-              },
-              {
-                param: 'MQ-5 Reading',
-                value: safe(ts?.mq5, 0),
-                unit: 'ADC units',
-                src: ds,
-                note: 'Relative gas indicator (NOT calibrated ppm)'
-              },
-              {
-                param: 'MQ-2 Reading',
-                value: ts?.mq2 !== null && ts?.mq2 !== undefined ? (ts.mq2 === 1 ? '1 (ALERT)' : '0 (NORMAL)') : '—',
-                unit: 'Digital',
-                src: ds,
-                note: 'Digital threshold: 0=NORMAL, 1=ALERT'
-              },
-              {
-                param: 'Methane Estimate',
-                value: safe(ts?.methane_estimate, 2),
-                unit: '%',
-                src: isSimulation ? 'SIMULATION' : 'N/A',
-                note: isSimulation ? 'Simulation estimate' : '⚠ No CH₄ sensor connected'
-              },
-              {
-                param: 'Gas Production',
-                value: safe(ts?.gas_production, 3),
-                unit: 'L/min',
-                src: isSimulation ? 'SIMULATION' : 'N/A',
-                note: isSimulation ? 'Simulation estimate' : '⚠ No flow sensor connected'
-              },
-            ].map(row => (
-              <tr key={row.param} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                <td style={{ padding: '0.55rem 0.75rem', fontWeight: 600, color: '#e2e8f0' }}>{row.param}</td>
-                <td style={{ padding: '0.55rem 0.75rem', color: '#00c896', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{row.value}</td>
-                <td style={{ padding: '0.55rem 0.75rem', color: '#64748b' }}>{row.unit}</td>
-                <td style={{ padding: '0.55rem 0.75rem' }}>
-                  <span className={`status-badge ${sourceBadgeClass(row.src)}`} style={{ fontSize: '0.6rem' }}>
-                    {row.src || '—'}
-                  </span>
-                </td>
-                <td style={{ padding: '0.55rem 0.75rem', color: '#475569', fontSize: '0.72rem' }}>{row.note}</td>
+        <div className="table-responsive">
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                {['Parameter', 'Value', 'Unit', 'Source', 'Note'].map(h => (
+                  <th key={h} style={{ textAlign: 'left', padding: '0.5rem 0.75rem', color: '#64748b', fontWeight: 600, fontSize: '0.7rem', letterSpacing: '0.05em' }}>{h}</th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {[
+                {
+                  param: 'Temperature',
+                  value: safe(ts?.temperature, 2),
+                  unit: '°C',
+                  src: ds,
+                  note: isSimulation ? 'Simulation estimate' : 'DHT11 sensor (real when ESP8266 connected)'
+                },
+                {
+                  param: 'Humidity',
+                  value: safe(ts?.humidity, 2),
+                  unit: '%',
+                  src: ds,
+                  note: isSimulation ? 'Simulation estimate' : 'DHT11 sensor (real when ESP8266 connected)'
+                },
+                {
+                  param: 'MQ-5 Reading',
+                  value: safe(ts?.mq5, 0),
+                  unit: 'ADC units',
+                  src: ds,
+                  note: 'Relative gas indicator (NOT calibrated ppm)'
+                },
+                {
+                  param: 'MQ-2 Reading',
+                  value: ts?.mq2 !== null && ts?.mq2 !== undefined ? (ts.mq2 === 1 ? '1 (ALERT)' : '0 (NORMAL)') : '—',
+                  unit: 'Digital',
+                  src: ds,
+                  note: 'Digital threshold: 0=NORMAL, 1=ALERT'
+                },
+                {
+                  param: 'Methane Estimate',
+                  value: safe(ts?.methane_estimate, 2),
+                  unit: '%',
+                  src: isSimulation ? 'SIMULATION' : 'N/A',
+                  note: isSimulation ? 'Simulation estimate' : '⚠ No CH₄ sensor connected'
+                },
+                {
+                  param: 'Gas Production',
+                  value: safe(ts?.gas_production, 3),
+                  unit: 'L/min',
+                  src: isSimulation ? 'SIMULATION' : 'N/A',
+                  note: isSimulation ? 'Simulation estimate' : '⚠ No flow sensor connected'
+                },
+              ].map(row => (
+                <tr key={row.param} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                  <td style={{ padding: '0.55rem 0.75rem', fontWeight: 600, color: '#e2e8f0' }}>{row.param}</td>
+                  <td style={{ padding: '0.55rem 0.75rem', color: '#00c896', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{row.value}</td>
+                  <td style={{ padding: '0.55rem 0.75rem', color: '#64748b' }}>{row.unit}</td>
+                  <td style={{ padding: '0.55rem 0.75rem' }}>
+                    <span className={`status-badge ${sourceBadgeClass(row.src)}`} style={{ fontSize: '0.6rem' }}>
+                      {row.src || '—'}
+                    </span>
+                  </td>
+                  <td style={{ padding: '0.55rem 0.75rem', color: '#475569', fontSize: '0.72rem' }}>{row.note}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
