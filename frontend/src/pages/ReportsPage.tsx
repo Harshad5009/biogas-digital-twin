@@ -45,6 +45,10 @@ export const ReportsPage: React.FC<Props> = ({ twinState: propTwin }) => {
         return [liveReading, ...prev.slice(0, 499)];
       });
     }
+
+    if (propTwin.anomaly_detected) {
+      systemApi.getAnomalies().then((d: unknown) => setAlerts((d as Alert[]) || [])).catch(() => {});
+    }
   }, [propTwin]);
 
   const loadData = useCallback(() => {

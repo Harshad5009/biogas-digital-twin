@@ -342,8 +342,7 @@ async def process_sensor_data(data: dict):
 
         # ─────────────────────────────────────────────────────────────────────
         # 5. Store alert if anomaly is detected
-        # ─────────────────────────────────────────────────────────────────────
-
+        active_alert_payload = None
         if twin_state.get("anomaly_detected"):
 
             level = (
@@ -366,6 +365,11 @@ async def process_sensor_data(data: dict):
             )
 
             db.add(alert)
+            active_alert_payload = {
+                "level": level,
+                "message": alert_message,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
 
             # Send alert through MQTT
             try:
@@ -407,6 +411,7 @@ async def process_sensor_data(data: dict):
         "type": "update",
 
         "twin_state": twin_state,
+        "alert": active_alert_payload,
 
         "raw": {
             "device_id": normalized_data.get("device_id"),
