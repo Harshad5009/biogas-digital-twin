@@ -147,7 +147,7 @@ def diagnose_and_prescribe(
     matched_keys: List[str] = []
 
     # Priority 1: Flammable gas hazard (MQ-2 or massive MQ-5)
-    if (mq2 is not None and mq2 >= 1.0) or (mq5 is not None and mq5 > 650) or "mq-2" in reasons_text or "mq-5 change" in reasons_text:
+    if (mq2 is not None and mq2 >= 1.0) or (mq5 is not None and mq5 > 750) or "mq-2" in reasons_text or "mq-5" in reasons_text:
         matched_keys.append("gas_spike")
 
     # Priority 2: Thermal deviations

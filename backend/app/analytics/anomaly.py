@@ -19,6 +19,7 @@ THRESHOLDS = {
     "humidity_min":         30.0,    # %
     "humidity_max":         95.0,    # %
     "mq5_spike":            200.0,   # ADC units change between readings
+    "mq5_max":              750.0,   # ADC units critical threshold (overpressure/leak hazard)
     # NOTE: MQ-2 from ESP8266 is a digital 0/1 value (NORMAL/ALERT), NOT an ADC value.
     # Do not apply ADC-based spike detection on it — use mq2_alert_detected flag instead.
     "gas_production_min":   0.3,     # L/min (simulation)
@@ -77,10 +78,13 @@ def rule_based_check(
             anomaly = True
             reasons.append(f"Humidity out of range ({humidity:.1f}%)")
 
-    if mq5 is not None and prev_mq5 is not None:
-        if abs(mq5 - prev_mq5) > THRESHOLDS["mq5_spike"]:
+    if mq5 is not None:
+        if prev_mq5 is not None and abs(mq5 - prev_mq5) > THRESHOLDS["mq5_spike"]:
             anomaly = True
             reasons.append(f"Sudden MQ-5 change ({abs(mq5 - prev_mq5):.0f} units)")
+        if mq5 > THRESHOLDS["mq5_max"]:
+            anomaly = True
+            reasons.append(f"MQ-5 gas concentration critically high ({mq5:.0f} ADC > {THRESHOLDS['mq5_max']:.0f} ADC)")
 
     # MQ-2 alert logic:
     # If mq2 <= 1: digital state from ESP8266 (0=NORMAL, 1=ALERT).
