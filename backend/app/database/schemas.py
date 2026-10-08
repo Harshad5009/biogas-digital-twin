@@ -2,9 +2,18 @@
 schemas.py — Pydantic models for API request/response validation.
 """
 
-from pydantic import BaseModel, Field
-from datetime import datetime
+from pydantic import BaseModel, Field, field_serializer
+from datetime import datetime, timezone
 from typing import Optional, List
+
+
+def serialize_dt_utc(dt: Optional[datetime]) -> Optional[str]:
+    """Ensure naive datetimes from SQLite are serialized with UTC timezone info."""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.isoformat()
 
 
 # ─────────────────────────────────────────────────────────────
@@ -37,6 +46,10 @@ class SensorReadingOut(BaseModel):
     gas_production_simulated: Optional[float]
     source: str
 
+    @field_serializer("timestamp")
+    def serialize_timestamp(self, dt: datetime, _info):
+        return serialize_dt_utc(dt)
+
     class Config:
         from_attributes = True
 
@@ -60,6 +73,10 @@ class TwinStateOut(BaseModel):
     anomaly_reason: Optional[str]
     data_source: str
 
+    @field_serializer("timestamp")
+    def serialize_timestamp(self, dt: datetime, _info):
+        return serialize_dt_utc(dt)
+
     class Config:
         from_attributes = True
 
@@ -78,6 +95,10 @@ class PredictionOut(BaseModel):
     confidence: Optional[float]
     model_type: Optional[str]
     based_on: str
+
+    @field_serializer("timestamp")
+    def serialize_timestamp(self, dt: datetime, _info):
+        return serialize_dt_utc(dt)
 
 
 class PredictionResult(BaseModel):
@@ -154,6 +175,10 @@ class AlertOut(BaseModel):
     value: Optional[float]
     acknowledged: bool
 
+    @field_serializer("timestamp")
+    def serialize_timestamp(self, dt: datetime, _info):
+        return serialize_dt_utc(dt)
+
     class Config:
         from_attributes = True
 
@@ -182,3 +207,8 @@ class SystemStatusOut(BaseModel):
     digester_id: str
     last_data_received: Optional[datetime]
     data_source: str
+
+    @field_serializer("last_data_received")
+    def serialize_last_data_received(self, dt: Optional[datetime], _info):
+        return serialize_dt_utc(dt)
+

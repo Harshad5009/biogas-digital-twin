@@ -7,6 +7,7 @@ import {
 import { Activity, Clock, ShieldCheck, Zap } from 'lucide-react';
 import type { SensorReading } from '../types';
 import { sensorsApi } from '../services/api';
+import { formatTime } from '../utils/formatters';
 
 export const HistoryPage: React.FC = () => {
   const [history, setHistory] = useState<SensorReading[]>([]);
@@ -46,7 +47,7 @@ export const HistoryPage: React.FC = () => {
 
     return {
       i,
-      time: new Date(r.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      time: formatTime(r.timestamp),
       temp: r.temperature,
       humidity: r.humidity,
       mq5: r.mq5_value,

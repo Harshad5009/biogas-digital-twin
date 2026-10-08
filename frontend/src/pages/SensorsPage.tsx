@@ -1,6 +1,6 @@
-// pages/SensorsPage.tsx — Live sensor data display
 import React from 'react';
 import type { TwinState } from '../types';
+import { formatDateTime } from '../utils/formatters';
 
 interface Props { twinState: TwinState | null; }
 
@@ -99,7 +99,7 @@ export const SensorsPage: React.FC<Props> = ({ twinState: ts }) => {
         </div>
         {ts?.last_update && (
           <div style={{ fontSize: '0.72rem', color: '#475569', marginTop: '0.5rem' }}>
-            Last update: {new Date(ts.last_update).toLocaleString()}
+            Last update: {formatDateTime(ts.last_update)}
           </div>
         )}
         {ts?.connection_status && (

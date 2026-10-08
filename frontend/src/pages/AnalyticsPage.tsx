@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import type { TwinState, SensorReading } from '../types';
 import { sensorsApi, twinApi } from '../services/api';
+import { formatTime } from '../utils/formatters';
 
 interface Props {
   twinState: TwinState | null;
@@ -105,7 +106,7 @@ export const AnalyticsPage: React.FC<Props> = ({ twinState: propTwin }) => {
 
   // Correlation series
   const correlationData = history.slice(-50).map((r, i) => ({
-    time: new Date(r.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    time: formatTime(r.timestamp),
     temp: r.temperature,
     humidity: r.humidity,
     mq5: r.mq5_value,

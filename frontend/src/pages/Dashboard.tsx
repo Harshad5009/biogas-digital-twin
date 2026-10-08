@@ -11,6 +11,7 @@ import { useWebSocket } from '../hooks/useWebSocket';
 import { twinApi } from '../services/api';
 import type { TwinState } from '../types';
 import plant3dImage from '../assets/plant_3d.jpg';
+import { formatTime } from '../utils/formatters';
 
 // ─────────────────────────────────────────────────────────────
 // Data source badge helper
@@ -99,7 +100,7 @@ export function Dashboard({ twinState: propTwin, connected: propConnected }: Das
   const mq2Status = mq2 === 1 ? 'ALERT' : 'NORMAL';
 
   const lastUpdated = ts?.last_update
-    ? new Date(ts.last_update).toLocaleTimeString()
+    ? formatTime(ts.last_update, true)
     : 'Waiting...';
 
   const badge = getSourceBadge(dataSource, connected);

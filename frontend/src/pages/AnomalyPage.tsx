@@ -1,7 +1,7 @@
-// pages/AnomalyPage.tsx — Explainable AI Anomaly Detection & Operator Action Guide
 import React, { useEffect, useState } from 'react';
 import { systemApi } from '../services/api';
 import type { Alert, TwinState } from '../types';
+import { formatDateTime } from '../utils/formatters';
 
 interface RemediationItem {
   title: string;
@@ -289,7 +289,7 @@ export const AnomalyPage: React.FC<Props> = ({ twinState: ts }) => {
                   </div>
                   <div style={{ fontSize: '0.8rem', color: '#94a3b8', lineHeight: 1.5 }}>{a.message ?? '—'}</div>
                   <div style={{ fontSize: '0.65rem', color: '#475569', marginTop: '0.25rem' }}>
-                    {new Date(a.timestamp).toLocaleString()}
+                    {formatDateTime(a.timestamp)}
                     {a.value != null && ` · value: ${a.value.toFixed(2)}`}
                   </div>
                 </div>

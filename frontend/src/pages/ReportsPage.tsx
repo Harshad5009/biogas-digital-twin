@@ -1,11 +1,12 @@
 // pages/ReportsPage.tsx — Automated plant performance reports & telemetry export
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   FileText, Download, Printer, CheckCircle2, Clock, Calendar,
-  ShieldCheck, AlertCircle, FileSpreadsheet, ArrowDownToLine
+  ShieldCheck, AlertCircle, FileSpreadsheet, ArrowDownToLine, RefreshCw, Activity
 } from 'lucide-react';
 import type { TwinState, SensorReading, Alert } from '../types';
 import { sensorsApi, twinApi, systemApi } from '../services/api';
+import { formatDateTime } from '../utils/formatters';
 
 interface Props {
   twinState: TwinState | null;
@@ -18,14 +19,35 @@ export const ReportsPage: React.FC<Props> = ({ twinState: propTwin }) => {
   const [reportPeriod, setReportPeriod] = useState<'24h' | '7d' | 'all'>('24h');
   const [loading, setLoading] = useState(false);
 
+  // Sync twin state & real-time telemetry streaming into the audit log
   useEffect(() => {
-    if (propTwin) setTwin(propTwin);
-    else {
-      twinApi.getState().then((s) => s && setTwin(s)).catch(() => {});
+    if (!propTwin) return;
+    setTwin(propTwin);
+
+    if (propTwin.last_update) {
+      setHistory((prev) => {
+        // Prevent duplicate entries if the latest timestamp already matches
+        if (prev.length > 0 && prev[0].timestamp === propTwin.last_update) {
+          return prev;
+        }
+        const liveReading: SensorReading = {
+          id: Date.now(),
+          device_id: 'digester01',
+          timestamp: propTwin.last_update!,
+          temperature: propTwin.temperature,
+          humidity: propTwin.humidity,
+          mq5_value: propTwin.mq5,
+          mq2_value: propTwin.mq2,
+          methane_simulated: propTwin.methane_estimate,
+          gas_production_simulated: propTwin.gas_production,
+          source: (propTwin.data_source as any) || 'LIVE',
+        };
+        return [liveReading, ...prev.slice(0, 499)];
+      });
     }
   }, [propTwin]);
 
-  useEffect(() => {
+  const loadData = useCallback(() => {
     const hours = reportPeriod === '24h' ? 24 : reportPeriod === '7d' ? 168 : 720;
     setLoading(true);
     Promise.all([
@@ -39,6 +61,10 @@ export const ReportsPage: React.FC<Props> = ({ twinState: propTwin }) => {
       .catch((err) => console.error('Failed to load report data:', err))
       .finally(() => setLoading(false));
   }, [reportPeriod]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   // CSV Export function
   const handleExportCSV = () => {
@@ -219,8 +245,37 @@ export const ReportsPage: React.FC<Props> = ({ twinState: propTwin }) => {
 
       {/* Audit Log Table */}
       <div className="card">
-        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', letterSpacing: '0.08em', marginBottom: '1rem' }}>
-          ▸ RECENT TELEMETRY AUDIT TRAIL
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', letterSpacing: '0.08em' }}>
+              ▸ RECENT TELEMETRY AUDIT TRAIL
+            </span>
+            <span style={{
+              fontSize: '0.65rem',
+              padding: '2px 8px',
+              borderRadius: 12,
+              background: 'rgba(0, 229, 153, 0.12)',
+              color: '#00e599',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '5px',
+              fontWeight: 600,
+            }}>
+              <Activity size={11} className="pulse-dot" />
+              REALTIME STREAM
+            </span>
+          </div>
+
+          <button
+            onClick={loadData}
+            disabled={loading}
+            className="btn-outline"
+            style={{ fontSize: '0.7rem', padding: '0.25rem 0.6rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+            title="Refresh database records"
+          >
+            <RefreshCw size={12} className={loading ? 'spin' : ''} />
+            Refresh
+          </button>
         </div>
 
         {history.length === 0 ? (
@@ -232,7 +287,7 @@ export const ReportsPage: React.FC<Props> = ({ twinState: propTwin }) => {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem', textAlign: 'left' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', color: '#64748b', position: 'sticky', top: 0, background: '#0c1524' }}>
-                  <th style={{ padding: '0.5rem 0.75rem' }}>TIMESTAMP</th>
+                  <th style={{ padding: '0.5rem 0.75rem' }}>TIMESTAMP (LOCAL)</th>
                   <th style={{ padding: '0.5rem 0.75rem' }}>SOURCE</th>
                   <th style={{ padding: '0.5rem 0.75rem' }}>TEMP (°C)</th>
                   <th style={{ padding: '0.5rem 0.75rem' }}>HUMIDITY (%)</th>
@@ -242,10 +297,10 @@ export const ReportsPage: React.FC<Props> = ({ twinState: propTwin }) => {
                 </tr>
               </thead>
               <tbody>
-                {history.slice(0, 30).map((r, i) => (
+                {history.slice(0, 50).map((r, i) => (
                   <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                    <td style={{ padding: '0.5rem 0.75rem', color: '#94a3b8' }}>
-                      {new Date(r.timestamp).toLocaleString()}
+                    <td style={{ padding: '0.5rem 0.75rem', color: '#94a3b8', whiteSpace: 'nowrap' }}>
+                      {formatDateTime(r.timestamp)}
                     </td>
                     <td style={{ padding: '0.5rem 0.75rem' }}>
                       <span style={{
