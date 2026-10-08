@@ -9,13 +9,13 @@
 
 Biogas digesters rely on delicate anaerobic microbial ecosystems influenced by temperature, substrate composition, and internal moisture. This project implements a complete **Digital Twin** system for miniature/laboratory biogas digesters:
 
-1. **Physical/Simulated Data Ingestion:** ESP8266 hardware or internal physics simulation engine publishing standardized JSON payloads via MQTT.
-2. **Virtual Digital Twin Synchronization:** Continuous internal state mirroring with rolling historical windows.
-3. **Two-Level Anomaly Detection:** Instant threshold violations (Level 1) and rolling-window statistical trend degradation (Level 2).
-4. **Transparent Health Index (0-100):** Documented, explainable multi-factor scoring (no black-box metrics).
-5. **Predictive Analytics:** Explainable Linear Regression forecasts with R² confidence metrics.
+1. **Physical/Simulated Data Ingestion:** ESP8266 hardware or internal physics simulation engine publishing standardized JSON payloads via MQTT (HiveMQ Cloud TLS or local broker).
+2. **Virtual Digital Twin Synchronization:** Continuous internal state mirroring with rolling historical telemetry buffers.
+3. **Two-Level Anomaly Detection & Explainable AI (XAI):** Instant threshold checks, statistical drift detection, and automated root-cause remediation with step-by-step Standard Operating Procedures (SOPs) for farmers and plant managers.
+4. **Transparent Health Index (0-100):** Documented, explainable multi-factor scoring (temperature stability, biochemical kinetics, gas yield compliance).
+5. **Trained Machine Learning Models:** Scikit-Learn Random Forest and Gradient Boosting Regressors trained on 2,613 calibration samples ($R^2 > 98.5\%$) persisted as `.joblib` artifacts on disk for real-time inference.
 6. **What-If Virtual Simulation:** Interactive parameter tweaking on the virtual twin without altering the physical system.
-7. **Production-Grade Web Dashboard:** High-aesthetic dark IoT theme built with React 18, Vite, TypeScript, and Recharts.
+7. **Mobile-Responsive IoT Dashboard:** Dark glassmorphic theme built with React 18, Vite, TypeScript, Recharts, and mobile slide-out navigation drawer with touch gestures.
 
 ---
 
@@ -110,11 +110,12 @@ biogas-digital-twin/
 │   │   ├── api/               # REST Route Handlers
 │   │   ├── database/          # SQLAlchemy Models & SQLite setup
 │   │   ├── digital_twin/      # Digital Twin Engine
-│   │   ├── analytics/         # Anomaly, Health, and Prediction logic
+│   │   ├── analytics/         # Anomaly, Health, Explainable AI, and ML Models (.joblib)
 │   │   ├── simulation/        # Scenario generator & What-If engine
-│   │   └── mqtt/              # paho-mqtt client wrapper
-│   ├── requirements.txt       # Python dependencies
-│   └── tests/                 # 17 Automated unit/integration tests
+│   │   └── mqtt/              # paho-mqtt client wrapper (HiveMQ Cloud TLS)
+│   ├── train_model.py         # Model training pipeline (RandomForest & GradientBoosting)
+│   ├── requirements.txt       # Python dependencies (scikit-learn, joblib, etc.)
+│   └── tests/                 # 18 Automated unit & integration tests (100% pass)
 │
 ├── frontend/                  # React 18 + TypeScript Dashboard
 │   ├── src/
