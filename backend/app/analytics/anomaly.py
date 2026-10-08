@@ -82,13 +82,17 @@ def rule_based_check(
             anomaly = True
             reasons.append(f"Sudden MQ-5 change ({abs(mq5 - prev_mq5):.0f} units)")
 
-    # MQ-2 is a digital 0/1 signal from ESP8266 (0=NORMAL, 1=ALERT).
-    # Only flag anomaly when it is actually in ALERT state (value == 1).
-    # Do NOT compare mq2 deltas — a 0→1 transition is only 1 unit and simulation
-    # MQ-2 (~320 ADC) vs live MQ-2 (0/1) would always trigger a false alarm.
-    if mq2 is not None and mq2 >= 1:
-        anomaly = True
-        reasons.append("MQ-2 gas sensor threshold exceeded (ALERT state)")
+    # MQ-2 alert logic:
+    # If mq2 <= 1: digital state from ESP8266 (0=NORMAL, 1=ALERT).
+    # If mq2 > 1: analog ADC reading (0-1023). Normal background is ~200-400 ADC.
+    # Alert triggers when digital == 1 or analog > 550 ADC.
+    if mq2 is not None:
+        if mq2 == 1:
+            anomaly = True
+            reasons.append("MQ-2 gas sensor threshold exceeded (ALERT state)")
+        elif mq2 > 550.0:
+            anomaly = True
+            reasons.append(f"MQ-2 flammable gas concentration dangerously high ({mq2:.0f} ADC)")
 
     if gas_production is not None:
         if gas_production < THRESHOLDS["gas_production_min"]:

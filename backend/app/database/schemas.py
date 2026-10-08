@@ -69,6 +69,7 @@ class TwinStateOut(BaseModel):
 # ─────────────────────────────────────────────────────────────
 
 class PredictionOut(BaseModel):
+    model_config = {"protected_namespaces": (), "from_attributes": True}
     id: int
     timestamp: datetime
     prediction_horizon: Optional[str]
@@ -78,12 +79,10 @@ class PredictionOut(BaseModel):
     model_type: Optional[str]
     based_on: str
 
-    class Config:
-        from_attributes = True
-
 
 class PredictionResult(BaseModel):
     """Detailed prediction response including trend direction."""
+    model_config = {"protected_namespaces": ()}
     parameter: str
     current_value: Optional[float]
     predicted_value: Optional[float]
@@ -92,6 +91,7 @@ class PredictionResult(BaseModel):
     confidence: Optional[float]
     model_type: str
     data_note: str      # Always clearly states if based on simulation data
+    source: Optional[str] = None
 
 
 # ─────────────────────────────────────────────────────────────

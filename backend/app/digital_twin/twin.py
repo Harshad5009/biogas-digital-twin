@@ -35,6 +35,7 @@ from app.analytics.health import calculate_health_score
 from app.analytics.prediction import (
     predict_gas_production,
     predict_temperature,
+    predict_mq5,
 )
 from app.config import settings
 
@@ -147,10 +148,24 @@ class DigitalTwin:
 
         self.gas_prediction: Optional[Dict[str, Any]] = None
         self.temp_prediction: Optional[Dict[str, Any]] = None
+        self.mq5_prediction: Optional[Dict[str, Any]] = None
 
     # ─────────────────────────────────────────────────────────────────────────
     # Mode & Source Selection
     # ─────────────────────────────────────────────────────────────────────────
+
+    def reset_history(self):
+        """Reset rolling history and predictions when switching scenario or mode."""
+        self._temp_history.clear()
+        self._gas_history.clear()
+        self._mq5_history.clear()
+        self._health_history.clear()
+        self._prev_temperature = None
+        self._prev_mq5 = None
+        self._prev_mq2 = None
+        self.gas_prediction = None
+        self.temp_prediction = None
+        self.mq5_prediction = None
 
     def set_mode(self, mode: str):
         """
@@ -164,10 +179,7 @@ class DigitalTwin:
         self.mode = mode_upper
         logger.info(f"Digital Twin active mode set to: {self.mode}")
 
-        # Clear previous cross-mode comparison values so we don't trigger false anomaly spikes
-        self._prev_temperature = None
-        self._prev_mq5 = None
-        self._prev_mq2 = None
+        self.reset_history()
 
         if self.mode == "LIVE":
             if self.last_live_reading is not None:
@@ -279,8 +291,13 @@ class DigitalTwin:
             self.mq2 = new_mq2
         if new_methane is not None:
             self.methane_estimate = new_methane
+        elif self.mq5 is not None:
+            self.methane_estimate = round(35.0 + min(45.0, (self.mq5 / 1023.0) * 45.0), 1)
+
         if new_gas is not None:
             self.gas_production = new_gas
+        elif self.mq5 is not None:
+            self.gas_production = round(0.3 + (self.mq5 / 1023.0) * 3.5, 3)
 
         # Normalize source tag
         raw_source = str(data.get("source", "LIVE")).upper()
@@ -591,29 +608,36 @@ class DigitalTwin:
 
     def _refresh_predictions(self):
         """Refresh predictive models using available history."""
+        is_live = self.get_effective_data_source() in ["LIVE", "ESP8266"]
 
-        # Gas production prediction is possible only when gas production
-        # values exist. With the current hardware, this may remain None.
+        # Gas production prediction
+        # For real hardware, gas_production is estimated from MQ-5 ADC.
+        # For simulation, it is explicitly emitted by the scenario generator.
         if len(self._gas_history) >= 5:
             try:
                 self.gas_prediction = predict_gas_production(
-                    list(self._gas_history)
+                    list(self._gas_history), is_live=is_live
                 )
             except Exception as error:
-                logger.warning(
-                    f"Gas prediction unavailable: {error}"
-                )
+                logger.warning(f"Gas prediction unavailable: {error}")
 
-        # Temperature prediction uses DHT11 history.
+        # Temperature prediction uses real DHT11 history (live) or simulated values.
         if len(self._temp_history) >= 5:
             try:
                 self.temp_prediction = predict_temperature(
-                    list(self._temp_history)
+                    list(self._temp_history), is_live=is_live
                 )
             except Exception as error:
-                logger.warning(
-                    f"Temperature prediction unavailable: {error}"
+                logger.warning(f"Temperature prediction unavailable: {error}")
+
+        # MQ-5 biogas index prediction (real ADC on live, simulated ADC on sim)
+        if len(self._mq5_history) >= 5:
+            try:
+                self.mq5_prediction = predict_mq5(
+                    list(self._mq5_history), is_live=is_live
                 )
+            except Exception as error:
+                logger.warning(f"MQ-5 prediction unavailable: {error}")
 
     # ─────────────────────────────────────────────────────────────────────────
     # State serialization
@@ -662,6 +686,7 @@ class DigitalTwin:
             # Predictions
             "gas_prediction": self.gas_prediction,
             "temp_prediction": self.temp_prediction,
+            "mq5_prediction": self.mq5_prediction,
 
             # Rolling history
             "history": {

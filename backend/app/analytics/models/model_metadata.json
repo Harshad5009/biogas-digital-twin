@@ -1,0 +1,64 @@
+{
+  "training_timestamp": "2026-10-08T17:27:31.070561+00:00",
+  "total_samples": 2613,
+  "train_samples": 2090,
+  "test_samples": 523,
+  "features": [
+    "temperature",
+    "humidity",
+    "mq5_value",
+    "mq2_value",
+    "temp_diff",
+    "mq5_diff"
+  ],
+  "models": {
+    "biogas_production": {
+      "algorithm": "RandomForestRegressor (scikit-learn)",
+      "n_estimators": 120,
+      "r2_score": 0.9903,
+      "mae": 0.0543,
+      "rmse": 0.0774,
+      "unit": "L/min",
+      "feature_importances": {
+        "temperature": 0.7819,
+        "humidity": 0.0018,
+        "mq5_value": 0.1614,
+        "mq2_value": 0.0523,
+        "temp_diff": 0.0013,
+        "mq5_diff": 0.0012
+      }
+    },
+    "methane_content": {
+      "algorithm": "GradientBoostingRegressor (scikit-learn)",
+      "n_estimators": 100,
+      "r2_score": 0.985,
+      "mae": 0.2876,
+      "rmse": 0.392,
+      "unit": "%",
+      "feature_importances": {
+        "temperature": 0.4198,
+        "humidity": 0.0013,
+        "mq5_value": 0.566,
+        "mq2_value": 0.0103,
+        "temp_diff": 0.0015,
+        "mq5_diff": 0.0011
+      }
+    },
+    "temperature_forecast": {
+      "algorithm": "RandomForestRegressor (scikit-learn)",
+      "n_estimators": 80,
+      "r2_score": 0.9996,
+      "mae": 0.0684,
+      "rmse": 0.084,
+      "unit": "\u00b0C",
+      "feature_importances": {
+        "temperature": 0.9999,
+        "humidity": 0.0,
+        "mq5_value": 0.0,
+        "mq2_value": 0.0,
+        "temp_diff": 0.0,
+        "mq5_diff": 0.0
+      }
+    }
+  }
+}

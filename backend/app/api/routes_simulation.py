@@ -21,26 +21,21 @@ async def start_simulation_endpoint(req: SimulationStartRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
     digital_twin.set_mode("SIMULATION")
+    digital_twin.reset_history()
 
     from app.simulation.simulator import is_simulation_running, start_simulation
     from app.config import settings
+    from app.main import process_sensor_data
+
+    # Generate and process initial reading immediately for instant UI update
+    first_reading = simulator.next_reading()
+    await process_sensor_data(first_reading)
 
     if not is_simulation_running():
-        from app.main import process_sensor_data
         start_simulation(
             interval_sec=settings.SIMULATION_INTERVAL_SECONDS,
             data_callback=process_sensor_data,
         )
-
-    try:
-        from app.main import ws_manager
-        await ws_manager.broadcast({
-            "type": "update",
-            "twin_state": digital_twin.to_dict(),
-            "mode": "SIMULATION",
-        })
-    except Exception:
-        pass
 
     return {
         "status": "ok",

@@ -33,9 +33,11 @@ export interface TwinState {
   update_count: number;
   gas_prediction: PredictionResult | null;
   temp_prediction: PredictionResult | null;
+  mq5_prediction: PredictionResult | null;
   history: {
     temperature: number[];
     gas_production: number[];
+    mq5: number[];
     health_score: number[];
   };
 }
@@ -49,6 +51,7 @@ export interface PredictionResult {
   confidence: number | null;
   model_type: string;
   data_note: string;
+  source?: 'LIVE' | 'SIMULATION';
   message?: string;
 }
 

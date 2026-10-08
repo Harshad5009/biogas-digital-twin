@@ -410,34 +410,50 @@ export function Dashboard({ twinState: propTwin, connected: propConnected }: Das
 
         {/* Prediction */}
         <section className="prediction-card">
-          <h2>PREDICTION — NEXT 6 HOURS</h2>
+          <h2>
+            PREDICTION — NEXT 1 MIN
+            <span style={{ marginLeft: 8, fontSize: '10px', fontWeight: 600,
+              color: isSimulation ? '#38bdf8' : '#00e599',
+              background: isSimulation ? 'rgba(56,189,248,0.1)' : 'rgba(0,229,153,0.1)',
+              border: isSimulation ? '1px solid rgba(56,189,248,0.25)' : '1px solid rgba(0,229,153,0.25)',
+              padding: '2px 7px', borderRadius: 99, verticalAlign: 'middle'
+            }}>
+              {isSimulation ? '🔷 SIM' : '⚡ LIVE'}
+            </span>
+          </h2>
 
           <div className="prediction-grid">
 
             <PredictionBox
-              title="Methane Estimate"
+              title="Temperature Forecast"
               value={ts?.temp_prediction?.predicted_value != null
-                ? `${ts.temp_prediction.predicted_value.toFixed(1)} %`
-                : 'N/A'}
-              status={ts?.temp_prediction?.trend || 'Estimated'}
+                ? `${ts.temp_prediction.predicted_value.toFixed(1)} °C`
+                : fmt(temperature, ' °C')}
+              status={ts?.temp_prediction?.trend || (isSimulation ? 'Simulation' : 'Live')}
             />
 
             <PredictionBox
-              title="Gas Flow Estimate"
-              value="N/A"
-              status="No flow sensor"
+              title="Gas Production Forecast"
+              value={ts?.gas_prediction?.predicted_value != null
+                ? `${ts.gas_prediction.predicted_value.toFixed(2)} L/min`
+                : ts?.mq5 != null ? `${((ts.mq5 / 1023) * 3.5).toFixed(2)} L/min` : 'N/A'}
+              status={ts?.gas_prediction?.trend || (isSimulation ? 'Simulation' : 'From MQ-5')}
             />
 
             <PredictionBox
-              title="Pressure"
-              value="N/A"
-              status="No sensor"
+              title="MQ-5 Biogas Index"
+              value={ts?.mq5_prediction?.predicted_value != null
+                ? `${ts.mq5_prediction.predicted_value.toFixed(0)} ADC`
+                : ts?.mq5 != null ? `${Math.round(ts.mq5)} ADC` : 'N/A'}
+              status={ts?.mq5_prediction?.trend || (isSimulation ? 'Simulation' : 'Live ADC')}
             />
 
             <PredictionBox
-              title="Current Temperature"
-              value={fmt(temperature, ' °C')}
-              status={isSimulation ? 'Simulation' : 'Live'}
+              title="Methane Estimate"
+              value={ts?.methane_estimate != null
+                ? `${ts.methane_estimate.toFixed(1)} %`
+                : ts?.mq5 != null ? `${Math.min(85, Math.max(35, (ts.mq5 / 1023) * 75)).toFixed(1)} %` : 'N/A'}
+              status={isSimulation ? 'Simulation' : 'Derived from MQ-5'}
             />
 
           </div>

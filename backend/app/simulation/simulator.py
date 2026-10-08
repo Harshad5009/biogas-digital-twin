@@ -84,76 +84,73 @@ class ScenarioSimulator:
 
     def _next_normal(self):
         """Scenario 1 — Normal Operation: stable with small fluctuations."""
-        self._temp += _noise(0.15)
-        self._temp = _clamp(self._temp, 29.0, 34.0)
-        self._humidity += _noise(0.3)
-        self._humidity = _clamp(self._humidity, 58.0, 70.0)
-        self._mq5 += _noise(8.0)
-        self._mq5 = _clamp(self._mq5, 300.0, 460.0)
-        self._mq2 += _noise(7.0)
-        self._mq2 = _clamp(self._mq2, 260.0, 380.0)
-        # Gas production follows a slight sine wave around base (realistic fluctuation)
-        self._gas_prod = BASE_GAS_PROD + 0.2 * math.sin(self.step * 0.15) + _noise(0.05)
-        self._gas_prod = _clamp(self._gas_prod, 2.0, 3.0)
-        self._methane = BASE_METHANE + _noise(0.5)
-        self._methane = _clamp(self._methane, 55.0, 62.0)
+        self._temp += _noise(0.12)
+        self._temp = _clamp(self._temp, 30.5, 33.5)
+        self._humidity += _noise(0.25)
+        self._humidity = _clamp(self._humidity, 60.0, 68.0)
+        self._mq5 += _noise(6.0)
+        self._mq5 = _clamp(self._mq5, 340.0, 420.0)
+        self._mq2 += _noise(5.0)
+        self._mq2 = _clamp(self._mq2, 260.0, 340.0)
+        # Steady gas production (2.3 - 2.8 L/min)
+        self._gas_prod = BASE_GAS_PROD + 0.15 * math.sin(self.step * 0.15) + _noise(0.04)
+        self._gas_prod = _clamp(self._gas_prod, 2.2, 2.8)
+        self._methane = BASE_METHANE + _noise(0.4)
+        self._methane = _clamp(self._methane, 58.0, 64.0)
 
     def _next_temp_drop(self):
-        """Scenario 2 — Temperature Drop: gradual decline causing gas reduction."""
-        # Temperature drops 0.3°C every step, bottoming at 22°C
-        self._temp = max(22.0, self._temp - 0.3 + _noise(0.1))
-        self._humidity += _noise(0.3)
-        self._humidity = _clamp(self._humidity, 55.0, 72.0)
-        # Gas production correlated with temperature — falls as temp drops
-        temp_factor = (self._temp - 22.0) / (BASE_TEMP - 22.0)
-        self._gas_prod = BASE_GAS_PROD * temp_factor + _noise(0.08)
-        self._gas_prod = _clamp(self._gas_prod, 0.2, BASE_GAS_PROD)
-        self._methane = BASE_METHANE * temp_factor + _noise(0.5)
-        self._methane = _clamp(self._methane, 30.0, 62.0)
-        self._mq5 = BASE_MQ5 * (0.8 + 0.2 * temp_factor) + _noise(10.0)
-        self._mq2 = BASE_MQ2 * (0.85 + 0.15 * temp_factor) + _noise(8.0)
+        """Scenario 2 — Temperature Drop: gradual decline causing biological inhibition and gas collapse."""
+        # Temperature drops ~0.45°C every step, bottoming at 17.5°C (well below mesophilic 28-35°C)
+        self._temp = max(17.5, self._temp - 0.45 + _noise(0.08))
+        self._humidity += _noise(0.2)
+        self._humidity = _clamp(self._humidity, 50.0, 70.0)
+        # Gas production drops steeply with temperature
+        temp_factor = max(0.05, (self._temp - 17.5) / (BASE_TEMP - 17.5))
+        self._gas_prod = max(0.12, BASE_GAS_PROD * temp_factor + _noise(0.04))
+        self._methane = max(24.0, BASE_METHANE * temp_factor + _noise(0.4))
+        self._mq5 = max(120.0, BASE_MQ5 * (0.3 + 0.7 * temp_factor) + _noise(8.0))
+        self._mq2 = _clamp(self._mq2 + _noise(4.0), 220.0, 320.0)
 
     def _next_gas_degradation(self):
-        """Scenario 3 — Gas degradation despite stable temperature."""
+        """Scenario 3 — Gas degradation despite stable temperature (acidosis / methanogen inhibition)."""
+        # Temperature stays optimal
         self._temp += _noise(0.1)
-        self._temp = _clamp(self._temp, 30.0, 34.0)
-        self._humidity += _noise(0.25)
-        self._humidity = _clamp(self._humidity, 58.0, 70.0)
-        # Gas production declines steadily
-        self._gas_prod = max(0.3, self._gas_prod - 0.04 + _noise(0.05))
-        self._methane = max(30.0, self._methane - 0.2 + _noise(0.3))
-        self._mq5 += _noise(12.0)
-        self._mq5 = _clamp(self._mq5, 250.0, 430.0)
-        self._mq2 += _noise(10.0)
+        self._temp = _clamp(self._temp, 31.0, 33.5)
+        self._humidity += _noise(0.2)
+        self._humidity = _clamp(self._humidity, 60.0, 68.0)
+        # Gas production and methane steadily collapse
+        self._gas_prod = max(0.15, self._gas_prod - 0.08 + _noise(0.03))
+        self._methane = max(25.0, self._methane - 0.8 + _noise(0.3))
+        self._mq5 = max(130.0, self._mq5 - 8.0 + _noise(6.0))
+        self._mq2 += _noise(5.0)
+        self._mq2 = _clamp(self._mq2, 240.0, 340.0)
 
     def _next_sudden_spike(self):
-        """Scenario 4 — Sudden abnormal gas reading spike."""
-        self._temp += _noise(0.12)
-        self._temp = _clamp(self._temp, 29.0, 34.0)
-        self._humidity += _noise(0.3)
-        # Add a big MQ spike at step 5, then return to normal
-        if self.step == 5 and not self._spike_done:
-            self._mq5 = BASE_MQ5 + random.uniform(300, 500)
-            self._mq2 = BASE_MQ2 + random.uniform(250, 400)
-            self._spike_done = True
+        """Scenario 4 — Sudden gas leak / methane surge triggering immediate Level 1 Safety Alert."""
+        self._temp += _noise(0.1)
+        self._temp = _clamp(self._temp, 30.0, 33.0)
+        self._humidity += _noise(0.2)
+        # From step 2 onward, maintain active elevated spike for emergency response
+        if self.step >= 2:
+            self._mq5 = _clamp(820.0 + _noise(25.0), 750.0, 980.0)
+            self._mq2 = _clamp(720.0 + _noise(20.0), 620.0, 880.0)
+            self._gas_prod = _clamp(3.8 + _noise(0.1), 3.2, 4.5)
+            self._methane = _clamp(74.0 + _noise(0.8), 68.0, 82.0)
         else:
-            self._mq5 += _noise(10.0)
-            self._mq5 = _clamp(self._mq5, 280.0, 450.0)
-            self._mq2 += _noise(8.0)
-            self._mq2 = _clamp(self._mq2, 240.0, 380.0)
-        self._gas_prod += _noise(0.06)
-        self._gas_prod = _clamp(self._gas_prod, 2.0, 3.0)
-        self._methane += _noise(0.4)
+            self._mq5 = BASE_MQ5 + _noise(10.0)
+            self._mq2 = BASE_MQ2 + _noise(8.0)
+            self._gas_prod = BASE_GAS_PROD + _noise(0.05)
+            self._methane = BASE_METHANE + _noise(0.4)
 
     def _next_recovery(self):
-        """Scenario 5 — Recovery: values return toward optimal range."""
-        # Pull toward base values gradually
-        self._temp += (BASE_TEMP - self._temp) * 0.15 + _noise(0.1)
-        self._humidity += (BASE_HUMIDITY - self._humidity) * 0.1 + _noise(0.2)
-        self._mq5 += (BASE_MQ5 - self._mq5) * 0.1 + _noise(8.0)
-        self._mq2 += (BASE_MQ2 - self._mq2) * 0.1 + _noise(7.0)
-        self._gas_prod += (BASE_GAS_PROD - self._gas_prod) * 0.15 + _noise(0.05)
-        self._methane += (BASE_METHANE - self._methane) * 0.1 + _noise(0.3)
+        """Scenario 5 — Recovery: process parameters return smoothly back toward optimal baseline."""
+        # Progressively interpolate towards optimal baseline
+        self._temp += (BASE_TEMP - self._temp) * 0.2 + _noise(0.08)
+        self._humidity += (BASE_HUMIDITY - self._humidity) * 0.15 + _noise(0.15)
+        self._mq5 += (BASE_MQ5 - self._mq5) * 0.2 + _noise(5.0)
+        self._mq2 += (BASE_MQ2 - self._mq2) * 0.2 + _noise(5.0)
+        self._gas_prod += (BASE_GAS_PROD - self._gas_prod) * 0.2 + _noise(0.03)
+        self._methane += (BASE_METHANE - self._methane) * 0.2 + _noise(0.2)
 
     def next_reading(self) -> Dict[str, Any]:
         """

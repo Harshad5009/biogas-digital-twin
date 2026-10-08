@@ -29,6 +29,20 @@ export const SettingsPage: React.FC<Props> = ({ twinState: ts, connected }) => {
       const res = await simulationApi.start(sc) as { message: string };
       setSimScenario(sc);
       setActiveScenarioMsg(res.message);
+      fetchStatus();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const stopSim = async () => {
+    setLoading(true);
+    try {
+      const res = await simulationApi.stop() as { message: string };
+      setActiveScenarioMsg(res.message);
+      fetchStatus();
     } catch (err) {
       console.error(err);
     } finally {
@@ -108,6 +122,30 @@ export const SettingsPage: React.FC<Props> = ({ twinState: ts, connected }) => {
                 <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.15rem' }}>{sc.desc}</div>
               </button>
             ))}
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
+            <button
+              onClick={stopSim}
+              disabled={loading}
+              style={{
+                flex: 1,
+                padding: '0.55rem 0.85rem',
+                borderRadius: 8,
+                background: 'rgba(239,68,68,0.1)',
+                border: '1px solid rgba(239,68,68,0.3)',
+                color: '#ef4444',
+                fontWeight: 600,
+                fontSize: '0.78rem',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.4rem',
+              }}
+            >
+              ■ Stop Simulation &amp; Return to Live Mode
+            </button>
           </div>
 
           {activeScenarioMsg && (

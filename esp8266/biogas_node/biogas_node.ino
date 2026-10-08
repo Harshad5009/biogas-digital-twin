@@ -12,8 +12,21 @@
 #include "mqtt_handler.h"
 
 unsigned long lastSensorReadTime = 0;
-unsigned long lastDisplayRefreshTime = 0;
-unsigned long lastReconnectAttempt = 0;
+const char* systemStatus = "NORMAL";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Command callback: handles incoming alert/buzzer commands from Digital Twin
+// ─────────────────────────────────────────────────────────────────────────────
+void onCommandReceived(const char* command, const char* level) {
+  Serial.printf("[COMMAND] Received from Twin: %s | Level: %s\n", command, level);
+  if (strcmp(command, "ALERT") == 0) {
+    systemStatus = (strcmp(level, "CRITICAL") == 0) ? "CRITICAL" : "WARNING";
+    triggerAlarm(true);  // Turn buzzer ON
+  } else if (strcmp(command, "CLEAR") == 0 || strcmp(command, "NORMAL") == 0) {
+    systemStatus = "NORMAL";
+    triggerAlarm(false); // Turn buzzer OFF
+  }
+}
 
 void setup() {
   Serial.begin(115200);
@@ -23,13 +36,12 @@ void setup() {
   Serial.println(" Biogas Digester IoT Node — ESP8266 Firmware     ");
   Serial.println("==================================================");
 
-  // Initialize sensors, actuators, and OLED
+  // Initialize sensors, actuators (buzzer), and OLED
   initSensors();
   initDisplay();
 
-  // Setup networking
-  setupWiFi();
-  setupMQTT();
+  // Setup networking with command callback for buzzer activation
+  mqttSetup(onCommandReceived);
 
   Serial.println("[SYSTEM] ESP8266 initialization complete.");
 }
@@ -37,17 +49,8 @@ void setup() {
 void loop() {
   unsigned long currentMillis = millis();
 
-  // 1. Maintain WiFi & MQTT connectivity without blocking
-  if (WiFi.status() == WL_CONNECTED) {
-    if (!mqttClient.connected()) {
-      if (currentMillis - lastReconnectAttempt > MQTT_RECONNECT_DELAY_MS) {
-        lastReconnectAttempt = currentMillis;
-        reconnectMQTT();
-      }
-    } else {
-      mqttClient.loop();
-    }
-  }
+  // 1. Maintain Wi-Fi and MQTT connectivity and process incoming commands
+  mqttLoop();
 
   // 2. Periodic Sensor Acquisition and Publishing
   if (currentMillis - lastSensorReadTime >= SENSOR_READ_INTERVAL_MS) {
@@ -59,11 +62,31 @@ void loop() {
                   currentReadings.mq5_raw, currentReadings.mq2_raw,
                   currentReadings.gas_production_simulated);
 
+    // Local safety trip: trigger buzzer if hardware detects dangerous limits
+    bool isDangerous = (currentReadings.mq5_raw > 650.0f) ||
+                       (currentReadings.temperature > 40.0f) ||
+                       (currentReadings.temperature < 20.0f);
+
+    const char* mq5Status = (currentReadings.mq5_raw > 550.0f) ? "ALERT" : "NORMAL";
+    const char* mq2Status = (currentReadings.mq2_raw > 550.0f) ? "ALERT" : "NORMAL";
+
+    if (isDangerous) {
+      systemStatus = (currentReadings.mq5_raw > 750.0f || currentReadings.temperature > 45.0f) ? "CRITICAL" : "WARNING";
+      triggerAlarm(true);
+    }
+
     // Publish to Digital Twin via MQTT
-    publishSensorData(currentReadings);
+    publishSensorReading(
+      currentReadings.temperature,
+      currentReadings.humidity,
+      (int)currentReadings.mq5_raw,
+      mq5Status,
+      mq2Status,
+      systemStatus
+    );
 
     // Refresh OLED screen with latest parameters
-    updateDisplay(currentReadings, systemStatus, (WiFi.status() == WL_CONNECTED), mqttClient.connected());
+    updateDisplay(currentReadings, systemStatus, (WiFi.status() == WL_CONNECTED), mqttIsConnected());
   }
 
   yield(); // Allow ESP8266 background WiFi stack & watchdog to process

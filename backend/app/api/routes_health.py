@@ -74,3 +74,26 @@ def acknowledge_alert(alert_id: int, db: Session = Depends(get_db)):
     alert.acknowledged = True
     db.commit()
     return {"status": "ok", "alert_id": alert_id}
+
+
+@router.get("/anomalies/remediation", summary="Explainable AI Root Cause & Operator Remediation Guide")
+def get_anomaly_remediation():
+    """
+    Returns Explainable AI (XAI) root-cause analysis and prescriptive, step-by-step
+    actions for the plant manager or farmer based on active conditions.
+    """
+    from app.digital_twin.twin import digital_twin
+    from app.analytics.remediation import diagnose_and_prescribe
+
+    state = digital_twin.to_dict()
+    reasons = [r.strip() for r in (state.get("anomaly_reason") or "").split(";") if r.strip()]
+    return diagnose_and_prescribe(
+        anomaly_detected=state.get("anomaly_detected", False),
+        reasons=reasons,
+        temperature=state.get("temperature"),
+        humidity=state.get("humidity"),
+        mq5=state.get("mq5"),
+        mq2=state.get("mq2"),
+        gas_production=state.get("gas_production"),
+        status=state.get("status"),
+    )

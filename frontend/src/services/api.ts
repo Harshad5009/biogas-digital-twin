@@ -52,6 +52,7 @@ export const twinApi = {
 export const predictionsApi = {
   get: () => get('/predictions/'),
   getHistory: () => get('/predictions/history'),
+  getModels: () => get('/predictions/models'),
 };
 
 // ── Simulation ────────────────────────────────────────────────
@@ -66,5 +67,6 @@ export const simulationApi = {
 export const systemApi = {
   getStatus: () => get('/system/status'),
   getAnomalies: () => get('/anomalies'),
+  getRemediation: () => get('/anomalies/remediation'),
   acknowledge: (id: number) => post(`/anomalies/${id}/acknowledge`, {}),
 };

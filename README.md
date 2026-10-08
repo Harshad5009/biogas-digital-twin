@@ -60,7 +60,7 @@ PHYSICAL / SIMULATED DIGESTER
    ```powershell
    .\run_backend.bat
    ```
-   *Backend runs on `http://localhost:8001` (API docs: `http://localhost:8001/docs`).*
+   *Backend runs on https://biogas-digital-twin-1.onrender.com`` (API docs: `https://biogas-digital-twin-1.onrender.com/docs`).*
 3. **Start Frontend (Terminal 2):**
    ```powershell
    .\run_frontend.bat

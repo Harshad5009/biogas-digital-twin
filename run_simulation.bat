@@ -18,6 +18,6 @@ if "%choice%"=="4" set SCENARIO=sudden_spike
 if "%choice%"=="5" set SCENARIO=recovery
 
 echo Activating scenario: %SCENARIO%
-curl -X POST http://localhost:8000/api/simulation/start -H "Content-Type: application/json" -d "{\"scenario\": \"%SCENARIO%\"}"
+curl -X POST https://biogas-digital-twin-1.onrender.com/api/simulation/start -H "Content-Type: application/json" -d "{\"scenario\": \"%SCENARIO%\"}"
 echo.
 pause

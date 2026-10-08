@@ -33,6 +33,7 @@ from app.simulation.simulator import (
     simulator,
     run_simulation_loop,
     stop_simulation,
+    start_simulation,
 )
 from app.api import (
     routes_sensors,
@@ -278,6 +279,14 @@ async def process_sensor_data(data: dict):
         db.add(reading)
         db.flush()
 
+        # Check active twin mode:
+        # If user explicitly activated SIMULATION mode, record live hardware packets in DB
+        # for audit and history, but do not overwrite the active simulation twin state.
+        if digital_twin.mode == "SIMULATION" and source in ["LIVE", "ESP8266"]:
+            logger.debug("Simulation mode active — preserving simulation scenario on twin.")
+            db.commit()
+            return
+
         # ─────────────────────────────────────────────────────────────────────
         # 3. Update Digital Twin using normalized data
         # ─────────────────────────────────────────────────────────────────────
@@ -458,23 +467,17 @@ async def lifespan(app: FastAPI):
 
     # Start simulation only when enabled
     if settings.SIMULATION_ENABLED:
-
-        sim_task = loop.create_task(
-            run_simulation_loop(
-                interval_sec=settings.SIMULATION_INTERVAL_SECONDS,
-                data_callback=process_sensor_data,
-            )
+        start_simulation(
+            interval_sec=settings.SIMULATION_INTERVAL_SECONDS,
+            data_callback=process_sensor_data,
+            loop=loop,
         )
-
         logger.info(
             f"Simulation started "
             f"(scenario={simulator.scenario}, "
             f"interval={settings.SIMULATION_INTERVAL_SECONDS}s)"
         )
-
     else:
-        sim_task = None
-
         logger.info(
             "Simulation disabled — "
             "waiting for ESP8266 data via MQTT."
@@ -495,10 +498,6 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down...")
 
     stop_simulation()
-
-    if sim_task and not sim_task.done():
-        sim_task.cancel()
-
     mqtt_client.disconnect()
 
     logger.info("Goodbye.")
